@@ -25,6 +25,10 @@ path = __toESM(path);
 let better_sqlite3 = require("better-sqlite3");
 let better_sqlite3$1 = __toESM(better_sqlite3, 1);
 better_sqlite3 = __toESM(better_sqlite3);
+let node_crypto = require("node:crypto");
+node_crypto = __toESM(node_crypto, 1);
+let node_fs = require("node:fs");
+node_fs = __toESM(node_fs, 1);
 // node_modules/drizzle-orm/entity.js
 var entityKind = Symbol.for("drizzle:entityKind");
 function is(value, type) {
@@ -4051,6 +4055,38 @@ function drizzle(...params) {
 	}
 	drizzle2.mock = mock;
 })(drizzle || (drizzle = {}));
+// node_modules/drizzle-orm/migrator.js
+function readMigrationFiles(config) {
+	const migrationFolderTo = config.migrationsFolder;
+	const migrationQueries = [];
+	const journalPath = `${migrationFolderTo}/meta/_journal.json`;
+	if (!node_fs.default.existsSync(journalPath)) throw new Error(`Can't find meta/_journal.json file`);
+	const journalAsString = node_fs.default.readFileSync(`${migrationFolderTo}/meta/_journal.json`).toString();
+	const journal = JSON.parse(journalAsString);
+	for (const journalEntry of journal.entries) {
+		const migrationPath = `${migrationFolderTo}/${journalEntry.tag}.sql`;
+		try {
+			const query = node_fs.default.readFileSync(`${migrationFolderTo}/${journalEntry.tag}.sql`).toString();
+			const result = query.split("--> statement-breakpoint").map((it) => {
+				return it;
+			});
+			migrationQueries.push({
+				sql: result,
+				bps: journalEntry.breakpoints,
+				folderMillis: journalEntry.when,
+				hash: node_crypto.default.createHash("sha256").update(query).digest("hex")
+			});
+		} catch {
+			throw new Error(`No file ${migrationPath} found in ${migrationFolderTo} folder`);
+		}
+	}
+	return migrationQueries;
+}
+// node_modules/drizzle-orm/better-sqlite3/migrator.js
+function migrate(db, config) {
+	const migrations = readMigrationFiles(config);
+	db.dialect.migrate(migrations, db.session, config);
+}
 // src/main/database/connection.ts
 var sqlite = null;
 var db = null;
@@ -4061,6 +4097,15 @@ function initialiseDatabase() {
 	sqlite.pragma("foreign_keys = ON");
 	sqlite.pragma("journal_mode = WAL");
 	db = drizzle(sqlite);
+	const migrationsFolder = path.default.join(electron.app.getAppPath(), "src/main/database/migrations");
+	try {
+		migrate(db, { migrationsFolder });
+	} catch (err) {
+		sqlite.close();
+		sqlite = null;
+		db = null;
+		throw new Error(`Database migration failed: ${err.message}`);
+	}
 }
 function getDatabase() {
 	if (!db) throw new Error("Database has not been initialised. Call initialiseDatabase() during app startup.");

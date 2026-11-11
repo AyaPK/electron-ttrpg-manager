@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { app } from 'electron'
 import path from 'path'
 
@@ -18,6 +19,17 @@ export function initialiseDatabase(): void {
   sqlite.pragma('journal_mode = WAL')
 
   db = drizzle(sqlite)
+
+  const migrationsFolder = path.join(app.getAppPath(), 'src/main/database/migrations')
+
+  try {
+    migrate(db, { migrationsFolder })
+  } catch (err) {
+    sqlite.close()
+    sqlite = null
+    db = null
+    throw new Error(`Database migration failed: ${(err as Error).message}`)
+  }
 }
 
 export function getDatabase(): ReturnType<typeof drizzle> {
