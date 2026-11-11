@@ -5,15 +5,6 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __exportAll = (all, no_symbols) => {
-	let target = {};
-	for (var name in all) __defProp(target, name, {
-		get: all[name],
-		enumerable: true
-	});
-	if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
-	return target;
-};
 var __copyProps = (to, from, except, desc) => {
 	if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
 		key = keys[i];
@@ -34,8 +25,6 @@ path = __toESM(path);
 let better_sqlite3 = require("better-sqlite3");
 let better_sqlite3$1 = __toESM(better_sqlite3, 1);
 better_sqlite3 = __toESM(better_sqlite3);
-let fs = require("fs");
-fs = __toESM(fs);
 // node_modules/drizzle-orm/entity.js
 var entityKind = Symbol.for("drizzle:entityKind");
 function is(value, type) {
@@ -4062,15 +4051,59 @@ function drizzle(...params) {
 	}
 	drizzle2.mock = mock;
 })(drizzle || (drizzle = {}));
+// src/main/database/connection.ts
+var sqlite = null;
+var db = null;
+function initialiseDatabase() {
+	if (db) return;
+	const dbPath = path.default.join(electron.app.getPath("userData"), "campaign-manager.db");
+	sqlite = new better_sqlite3.default(dbPath);
+	sqlite.pragma("foreign_keys = ON");
+	sqlite.pragma("journal_mode = WAL");
+	db = drizzle(sqlite);
+}
+function getDatabase() {
+	if (!db) throw new Error("Database has not been initialised. Call initialiseDatabase() during app startup.");
+	return db;
+}
+function closeDatabase() {
+	if (sqlite) {
+		sqlite.close();
+		sqlite = null;
+		db = null;
+	}
+}
+// node_modules/uuid/dist-node/stringify.js
+var byteToHex = [];
+for (let i = 0; i < 256; ++i) byteToHex.push((i + 256).toString(16).slice(1));
+function unsafeStringify(arr, offset = 0) {
+	return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+}
+// node_modules/uuid/dist-node/rng.js
+var rnds8 = /* @__PURE__ */ new Uint8Array(16);
+function rng() {
+	return crypto.getRandomValues(rnds8);
+}
+// node_modules/uuid/dist-node/v4.js
+function v4(options, buf, offset) {
+	if (!buf && !options && crypto.randomUUID) return crypto.randomUUID();
+	return _v4(options, buf, offset);
+}
+function _v4(options, buf, offset) {
+	options = options || {};
+	const rnds = options.random ?? options.rng?.() ?? rng();
+	if (rnds.length < 16) throw new Error("Random bytes length must be >= 16");
+	rnds[6] = rnds[6] & 15 | 64;
+	rnds[8] = rnds[8] & 63 | 128;
+	if (buf) {
+		offset = offset || 0;
+		if (offset < 0 || offset + 16 > buf.length) throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
+		for (let i = 0; i < 16; ++i) buf[offset + i] = rnds[i];
+		return buf;
+	}
+	return unsafeStringify(rnds);
+}
 // electron/schema.ts
-var schema_exports = /* @__PURE__ */ __exportAll({
-	ENTITY_TYPES: () => ENTITY_TYPES,
-	RELATIONSHIP_TYPES: () => RELATIONSHIP_TYPES,
-	campaigns: () => campaigns,
-	entities: () => entities,
-	relationships: () => relationships,
-	settings: () => settings
-});
 var campaigns = sqliteTable("campaigns", {
 	id: text("id").primaryKey(),
 	name: text("name").notNull(),
@@ -4108,130 +4141,16 @@ var settings = sqliteTable("settings", {
 	key: text("key").primaryKey(),
 	value: text("value").notNull()
 });
-var RELATIONSHIP_TYPES = [
-	"belongs_to",
-	"lives_in",
-	"controls",
-	"owns",
-	"allied_with",
-	"enemy_of",
-	"member_of",
-	"located_in",
-	"created_by",
-	"related_to"
-];
-var ENTITY_TYPES = [
-	"npc",
-	"location",
-	"faction",
-	"item"
-];
-// electron/database.ts
-var db;
-var sqlite;
-function getDb() {
-	if (!db) throw new Error("Database not initialized");
-	return db;
-}
-function initDatabase() {
-	const userDataPath = electron.app.getPath("userData");
-	const dbPath = path.default.join(userDataPath, "campaign-manager.db");
-	if (!fs.default.existsSync(userDataPath)) fs.default.mkdirSync(userDataPath, { recursive: true });
-	sqlite = new better_sqlite3.default(dbPath);
-	sqlite.pragma("journal_mode = WAL");
-	sqlite.pragma("foreign_keys = ON");
-	db = drizzle(sqlite, { schema: schema_exports });
-	runMigrations();
-	return db;
-}
-function runMigrations() {
-	sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS campaigns (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      system TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS entities (
-      id TEXT PRIMARY KEY,
-      campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL CHECK(type IN ('npc', 'location', 'faction', 'item')),
-      visibility TEXT NOT NULL DEFAULT 'public' CHECK(visibility IN ('public', 'private')),
-      description TEXT NOT NULL DEFAULT '',
-      metadata TEXT NOT NULL DEFAULT '{}',
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS relationships (
-      id TEXT PRIMARY KEY,
-      campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
-      source_entity_id TEXT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-      target_entity_id TEXT NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-      relationship_type TEXT NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      created_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_entities_campaign ON entities(campaign_id);
-    CREATE INDEX IF NOT EXISTS idx_entities_type ON entities(type);
-    CREATE INDEX IF NOT EXISTS idx_relationships_source ON relationships(source_entity_id);
-    CREATE INDEX IF NOT EXISTS idx_relationships_target ON relationships(target_entity_id);
-    CREATE INDEX IF NOT EXISTS idx_relationships_campaign ON relationships(campaign_id);
-  `);
-}
-function closeDatabase() {
-	if (sqlite) sqlite.close();
-}
-// node_modules/uuid/dist-node/stringify.js
-var byteToHex = [];
-for (let i = 0; i < 256; ++i) byteToHex.push((i + 256).toString(16).slice(1));
-function unsafeStringify(arr, offset = 0) {
-	return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
-}
-// node_modules/uuid/dist-node/rng.js
-var rnds8 = /* @__PURE__ */ new Uint8Array(16);
-function rng() {
-	return crypto.getRandomValues(rnds8);
-}
-// node_modules/uuid/dist-node/v4.js
-function v4(options, buf, offset) {
-	if (!buf && !options && crypto.randomUUID) return crypto.randomUUID();
-	return _v4(options, buf, offset);
-}
-function _v4(options, buf, offset) {
-	options = options || {};
-	const rnds = options.random ?? options.rng?.() ?? rng();
-	if (rnds.length < 16) throw new Error("Random bytes length must be >= 16");
-	rnds[6] = rnds[6] & 15 | 64;
-	rnds[8] = rnds[8] & 63 | 128;
-	if (buf) {
-		offset = offset || 0;
-		if (offset < 0 || offset + 16 > buf.length) throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-		for (let i = 0; i < 16; ++i) buf[offset + i] = rnds[i];
-		return buf;
-	}
-	return unsafeStringify(rnds);
-}
 // electron/handlers/campaigns.ts
 function registerCampaignHandlers() {
 	electron.ipcMain.handle("campaigns:list", async () => {
-		return getDb().select().from(campaigns).orderBy(campaigns.updatedAt);
+		return getDatabase().select().from(campaigns).orderBy(campaigns.updatedAt);
 	});
 	electron.ipcMain.handle("campaigns:get", async (_event, id) => {
-		return (await getDb().select().from(campaigns).where(eq(campaigns.id, id)))[0] ?? null;
+		return (await getDatabase().select().from(campaigns).where(eq(campaigns.id, id)))[0] ?? null;
 	});
 	electron.ipcMain.handle("campaigns:create", async (_event, data) => {
-		const db = getDb();
+		const db = getDatabase();
 		const now = (/* @__PURE__ */ new Date()).toISOString();
 		const campaign = {
 			id: v4(),
@@ -4245,7 +4164,7 @@ function registerCampaignHandlers() {
 		return campaign;
 	});
 	electron.ipcMain.handle("campaigns:update", async (_event, id, data) => {
-		const db = getDb();
+		const db = getDatabase();
 		const now = (/* @__PURE__ */ new Date()).toISOString();
 		await db.update(campaigns).set({
 			...data,
@@ -4254,14 +4173,14 @@ function registerCampaignHandlers() {
 		return (await db.select().from(campaigns).where(eq(campaigns.id, id)))[0] ?? null;
 	});
 	electron.ipcMain.handle("campaigns:delete", async (_event, id) => {
-		await getDb().delete(campaigns).where(eq(campaigns.id, id));
+		await getDatabase().delete(campaigns).where(eq(campaigns.id, id));
 		return { success: true };
 	});
 }
 // electron/handlers/entities.ts
 function registerEntityHandlers() {
 	electron.ipcMain.handle("entities:list", async (_event, campaignId, filters) => {
-		const db = getDb();
+		const db = getDatabase();
 		let query = db.select().from(entities).where(eq(entities.campaignId, campaignId));
 		if (filters?.type) query = db.select().from(entities).where(and(eq(entities.campaignId, campaignId), eq(entities.type, filters.type)));
 		if (filters?.search) query = db.select().from(entities).where(and(eq(entities.campaignId, campaignId), like(entities.name, `%${filters.search}%`)));
@@ -4269,10 +4188,10 @@ function registerEntityHandlers() {
 		return query.orderBy(entities.updatedAt);
 	});
 	electron.ipcMain.handle("entities:get", async (_event, id) => {
-		return (await getDb().select().from(entities).where(eq(entities.id, id)))[0] ?? null;
+		return (await getDatabase().select().from(entities).where(eq(entities.id, id)))[0] ?? null;
 	});
 	electron.ipcMain.handle("entities:create", async (_event, data) => {
-		const db = getDb();
+		const db = getDatabase();
 		const now = (/* @__PURE__ */ new Date()).toISOString();
 		const entity = {
 			id: v4(),
@@ -4292,7 +4211,7 @@ function registerEntityHandlers() {
 		};
 	});
 	electron.ipcMain.handle("entities:update", async (_event, id, data) => {
-		const db = getDb();
+		const db = getDatabase();
 		const updateData = { updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
 		if (data.name !== void 0) updateData.name = data.name;
 		if (data.description !== void 0) updateData.description = data.description;
@@ -4307,11 +4226,11 @@ function registerEntityHandlers() {
 		};
 	});
 	electron.ipcMain.handle("entities:delete", async (_event, id) => {
-		await getDb().delete(entities).where(eq(entities.id, id));
+		await getDatabase().delete(entities).where(eq(entities.id, id));
 		return { success: true };
 	});
 	electron.ipcMain.handle("entities:counts", async (_event, campaignId) => {
-		const all = await getDb().select().from(entities).where(eq(entities.campaignId, campaignId));
+		const all = await getDatabase().select().from(entities).where(eq(entities.campaignId, campaignId));
 		const counts = {
 			npc: 0,
 			location: 0,
@@ -4326,7 +4245,7 @@ function registerEntityHandlers() {
 // electron/handlers/relationships.ts
 function registerRelationshipHandlers() {
 	electron.ipcMain.handle("relationships:list", async (_event, entityId) => {
-		const db = getDb();
+		const db = getDatabase();
 		const rows = await db.select().from(relationships).where(or(eq(relationships.sourceEntityId, entityId), eq(relationships.targetEntityId, entityId)));
 		return await Promise.all(rows.map(async (rel) => {
 			const [source] = await db.select().from(entities).where(eq(entities.id, rel.sourceEntityId));
@@ -4339,10 +4258,10 @@ function registerRelationshipHandlers() {
 		}));
 	});
 	electron.ipcMain.handle("relationships:listByCampaign", async (_event, campaignId) => {
-		return getDb().select().from(relationships).where(eq(relationships.campaignId, campaignId));
+		return getDatabase().select().from(relationships).where(eq(relationships.campaignId, campaignId));
 	});
 	electron.ipcMain.handle("relationships:create", async (_event, data) => {
-		const db = getDb();
+		const db = getDatabase();
 		const now = (/* @__PURE__ */ new Date()).toISOString();
 		const rel = {
 			id: v4(),
@@ -4357,17 +4276,17 @@ function registerRelationshipHandlers() {
 		return rel;
 	});
 	electron.ipcMain.handle("relationships:delete", async (_event, id) => {
-		await getDb().delete(relationships).where(eq(relationships.id, id));
+		await getDatabase().delete(relationships).where(eq(relationships.id, id));
 		return { success: true };
 	});
 }
 // electron/handlers/settings.ts
 function registerSettingsHandlers() {
 	electron.ipcMain.handle("settings:get", async (_event, key) => {
-		return (await getDb().select().from(settings).where(eq(settings.key, key)))[0]?.value ?? null;
+		return (await getDatabase().select().from(settings).where(eq(settings.key, key)))[0]?.value ?? null;
 	});
 	electron.ipcMain.handle("settings:set", async (_event, key, value) => {
-		await getDb().insert(settings).values({
+		await getDatabase().insert(settings).values({
 			key,
 			value
 		}).onConflictDoUpdate({
@@ -4377,7 +4296,7 @@ function registerSettingsHandlers() {
 		return { success: true };
 	});
 	electron.ipcMain.handle("settings:getAll", async () => {
-		const rows = await getDb().select().from(settings);
+		const rows = await getDatabase().select().from(settings);
 		return Object.fromEntries(rows.map((r) => [r.key, r.value]));
 	});
 }
@@ -4423,7 +4342,7 @@ electron.app.on("activate", () => {
 	if (electron.BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 electron.app.whenReady().then(() => {
-	initDatabase();
+	initialiseDatabase();
 	registerCampaignHandlers();
 	registerEntityHandlers();
 	registerRelationshipHandlers();

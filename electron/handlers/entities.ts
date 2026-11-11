@@ -1,13 +1,13 @@
 import { ipcMain } from 'electron'
 import { eq, and, like } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
-import { getDb } from '../database'
+import { getDatabase } from '../../src/main/database/connection'
 import { entities } from '../schema'
 import type { EntityType } from '../schema'
 
 export function registerEntityHandlers() {
   ipcMain.handle('entities:list', async (_event, campaignId: string, filters?: { type?: EntityType; search?: string }) => {
-    const db = getDb()
+    const db = getDatabase()
     let query = db.select().from(entities).where(eq(entities.campaignId, campaignId))
 
     if (filters?.type) {
@@ -36,7 +36,7 @@ export function registerEntityHandlers() {
   })
 
   ipcMain.handle('entities:get', async (_event, id: string) => {
-    const db = getDb()
+    const db = getDatabase()
     const result = await db.select().from(entities).where(eq(entities.id, id))
     return result[0] ?? null
   })
@@ -49,7 +49,7 @@ export function registerEntityHandlers() {
     visibility?: 'public' | 'private'
     metadata?: Record<string, unknown>
   }) => {
-    const db = getDb()
+    const db = getDatabase()
     const now = new Date().toISOString()
     const entity = {
       id: uuidv4(),
@@ -72,7 +72,7 @@ export function registerEntityHandlers() {
     visibility?: 'public' | 'private'
     metadata?: Record<string, unknown>
   }) => {
-    const db = getDb()
+    const db = getDatabase()
     const now = new Date().toISOString()
     const updateData: Record<string, unknown> = { updatedAt: now }
     if (data.name !== undefined) updateData.name = data.name
@@ -87,13 +87,13 @@ export function registerEntityHandlers() {
   })
 
   ipcMain.handle('entities:delete', async (_event, id: string) => {
-    const db = getDb()
+    const db = getDatabase()
     await db.delete(entities).where(eq(entities.id, id))
     return { success: true }
   })
 
   ipcMain.handle('entities:counts', async (_event, campaignId: string) => {
-    const db = getDb()
+    const db = getDatabase()
     const all = await db.select().from(entities).where(eq(entities.campaignId, campaignId))
     const counts = { npc: 0, location: 0, faction: 0, item: 0, total: all.length }
     for (const e of all) {

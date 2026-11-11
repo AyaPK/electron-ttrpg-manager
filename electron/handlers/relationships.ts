@@ -1,12 +1,12 @@
 import { ipcMain } from 'electron'
 import { eq, or } from 'drizzle-orm'
 import { v4 as uuidv4 } from 'uuid'
-import { getDb } from '../database'
+import { getDatabase } from '../../src/main/database/connection'
 import { relationships, entities } from '../schema'
 
 export function registerRelationshipHandlers() {
   ipcMain.handle('relationships:list', async (_event, entityId: string) => {
-    const db = getDb()
+    const db = getDatabase()
     const rows = await db.select().from(relationships).where(
       or(
         eq(relationships.sourceEntityId, entityId),
@@ -22,7 +22,7 @@ export function registerRelationshipHandlers() {
   })
 
   ipcMain.handle('relationships:listByCampaign', async (_event, campaignId: string) => {
-    const db = getDb()
+    const db = getDatabase()
     return db.select().from(relationships).where(eq(relationships.campaignId, campaignId))
   })
 
@@ -33,7 +33,7 @@ export function registerRelationshipHandlers() {
     relationshipType: string
     description?: string
   }) => {
-    const db = getDb()
+    const db = getDatabase()
     const now = new Date().toISOString()
     const rel = {
       id: uuidv4(),
@@ -49,7 +49,7 @@ export function registerRelationshipHandlers() {
   })
 
   ipcMain.handle('relationships:delete', async (_event, id: string) => {
-    const db = getDb()
+    const db = getDatabase()
     await db.delete(relationships).where(eq(relationships.id, id))
     return { success: true }
   })

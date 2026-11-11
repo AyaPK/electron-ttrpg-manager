@@ -1,6 +1,6 @@
 import { app, BrowserWindow, shell } from 'electron'
 import path from 'path'
-import { initDatabase, closeDatabase } from './database'
+import { initialiseDatabase, closeDatabase } from '../src/main/database/connection'
 import { registerCampaignHandlers } from './handlers/campaigns'
 import { registerEntityHandlers } from './handlers/entities'
 import { registerRelationshipHandlers } from './handlers/relationships'
@@ -62,7 +62,7 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(() => {
-  initDatabase()
+  initialiseDatabase()
   registerCampaignHandlers()
   registerEntityHandlers()
   registerRelationshipHandlers()
