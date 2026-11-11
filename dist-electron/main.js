@@ -29,6 +29,7 @@ let node_crypto = require("node:crypto");
 node_crypto = __toESM(node_crypto, 1);
 let node_fs = require("node:fs");
 node_fs = __toESM(node_fs, 1);
+let crypto$1 = require("crypto");
 // node_modules/drizzle-orm/entity.js
 var entityKind = Symbol.for("drizzle:entityKind");
 function is(value, type) {
@@ -4118,6 +4119,38 @@ function closeDatabase() {
 		db = null;
 	}
 }
+// src/main/database/schema.ts
+var workspaces = sqliteTable("workspaces", {
+	id: text("id").primaryKey(),
+	name: text("name").notNull(),
+	createdAt: integer("created_at").notNull(),
+	updatedAt: integer("updated_at").notNull()
+});
+sqliteTable("campaigns", {
+	id: text("id").primaryKey(),
+	workspaceId: text("workspace_id").notNull().references(() => workspaces.id),
+	name: text("name").notNull(),
+	description: text("description"),
+	system: text("system"),
+	createdAt: integer("created_at").notNull(),
+	updatedAt: integer("updated_at").notNull()
+});
+async function initialiseWorkspace() {
+	const db = getDatabase();
+	const rows = await db.select().from(workspaces).limit(1);
+	if (rows.length > 0) {
+		rows[0];
+		return;
+	}
+	const now = Date.now();
+	const created = {
+		id: (0, crypto$1.randomUUID)(),
+		name: "Default Workspace",
+		createdAt: now,
+		updatedAt: now
+	};
+	await db.insert(workspaces).values(created);
+}
 // node_modules/uuid/dist-node/stringify.js
 var byteToHex = [];
 for (let i = 0; i < 256; ++i) byteToHex.push((i + 256).toString(16).slice(1));
@@ -4386,8 +4419,9 @@ electron.app.on("window-all-closed", () => {
 electron.app.on("activate", () => {
 	if (electron.BrowserWindow.getAllWindows().length === 0) createWindow();
 });
-electron.app.whenReady().then(() => {
+electron.app.whenReady().then(async () => {
 	initialiseDatabase();
+	await initialiseWorkspace();
 	registerCampaignHandlers();
 	registerEntityHandlers();
 	registerRelationshipHandlers();
