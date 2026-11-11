@@ -46,3 +46,8 @@ export function closeDatabase(): void {
     db = null
   }
 }
+
+export function _setDatabaseForTesting(instance: Database.Database): void {
+  sqlite = instance
+  db = drizzle(instance)
+}

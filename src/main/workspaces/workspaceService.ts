@@ -32,3 +32,7 @@ export function getActiveWorkspace(): Workspace {
   }
   return activeWorkspace
 }
+
+export function _setActiveWorkspaceForTesting(workspace: Workspace): void {
+  activeWorkspace = workspace
+}
