@@ -27,7 +27,7 @@ export function CampaignOverview() {
 
   const openEdit = () => {
     if (!activeCampaign) return
-    setForm({ name: activeCampaign.name, description: activeCampaign.description, system: activeCampaign.system })
+    setForm({ name: activeCampaign.name, description: activeCampaign.description ?? '', system: activeCampaign.system ?? '' })
     setShowEdit(true)
   }
 

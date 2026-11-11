@@ -1,10 +1,11 @@
 export interface Campaign {
   id: string
+  workspaceId: string
   name: string
-  description: string
-  system: string
-  createdAt: string
-  updatedAt: string
+  description: string | null
+  system: string | null
+  createdAt: number
+  updatedAt: number
 }
 
 export type EntityType = 'npc' | 'location' | 'faction' | 'item'
@@ -95,8 +96,8 @@ declare global {
       campaigns: {
         list: () => Promise<Campaign[]>
         get: (id: string) => Promise<Campaign | null>
-        create: (data: { name: string; description: string; system: string }) => Promise<Campaign>
-        update: (id: string, data: { name?: string; description?: string; system?: string }) => Promise<Campaign | null>
+        create: (data: { name: string; description?: string; system?: string }) => Promise<Campaign>
+        update: (id: string, data: { name?: string; description?: string; system?: string }) => Promise<Campaign>
         delete: (id: string) => Promise<{ success: boolean }>
       }
       entities: {

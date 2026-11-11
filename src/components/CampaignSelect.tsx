@@ -31,7 +31,7 @@ export function CampaignSelect() {
   }
 
   const openEdit = (c: Campaign) => {
-    setForm({ name: c.name, description: c.description, system: c.system })
+    setForm({ name: c.name, description: c.description ?? '', system: c.system ?? '' })
     setEditTarget(c)
   }
 
