@@ -8,7 +8,9 @@
     "electron:dev": "vite build --watch & electron .",
     "build": "vite build && tsc -p tsconfig.electron.json",
     "package": "npm run build && electron-builder",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@tiptap/extension-placeholder": "^3.33.1",
@@ -25,6 +27,7 @@
     "zustand": "^5.1.0"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.1",
     "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.19.2",
@@ -36,7 +39,6 @@
     "drizzle-kit": "^0.31.11",
     "electron": "^45.3.0",
     "electron-builder": "^26.18.0",
-    "electron-rebuild": "^3.2.9",
     "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
