@@ -43,7 +43,7 @@ const api = {
       relationshipType: string
       description?: string
     }) => ipcRenderer.invoke('relationships:create', data),
-    delete: (id: string) => ipcRenderer.invoke('relationships:delete', id),
+    delete: (id: string, campaignId: string) => ipcRenderer.invoke('relationships:delete', id, campaignId),
   },
   settings: {
     get: (key: string) => ipcRenderer.invoke('settings:get', key),

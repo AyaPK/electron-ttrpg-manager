@@ -20,7 +20,7 @@ electron.contextBridge.exposeInMainWorld("api", {
 		list: (entityId) => electron.ipcRenderer.invoke("relationships:list", entityId),
 		listByCampaign: (campaignId) => electron.ipcRenderer.invoke("relationships:listByCampaign", campaignId),
 		create: (data) => electron.ipcRenderer.invoke("relationships:create", data),
-		delete: (id) => electron.ipcRenderer.invoke("relationships:delete", id)
+		delete: (id, campaignId) => electron.ipcRenderer.invoke("relationships:delete", id, campaignId)
 	},
 	settings: {
 		get: (key) => electron.ipcRenderer.invoke("settings:get", key),

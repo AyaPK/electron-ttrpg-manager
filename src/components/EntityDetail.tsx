@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Edit2, Trash2 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
-import type { Entity, NpcMetadata, LocationMetadata, FactionMetadata, ItemMetadata } from '../types/electron.d'
+import type { Entity, NpcMetadata, LocationMetadata, FactionMetadata, ItemMetadata, MonsterMetadata, PlayerMetadata } from '../types/electron.d'
 import { EntityTypeBadge } from './ui/EntityTypeBadge'
 import { RichTextEditor } from './ui/RichTextEditor'
 import { Button } from './ui/Button'
@@ -164,6 +164,17 @@ function MetadataSection({ entity }: { entity: Entity }) {
     const m = meta as unknown as ItemMetadata
     if (m.itemType) fields.push({ label: 'Item Type', value: m.itemType })
     if (m.rarity) fields.push({ label: 'Rarity', value: m.rarity })
+  } else if (entity.type === 'monster') {
+    const m = meta as unknown as MonsterMetadata
+    if (m.monsterType) fields.push({ label: 'Type', value: m.monsterType })
+    if (m.challengeRating) fields.push({ label: 'CR', value: m.challengeRating })
+    if (m.habitat) fields.push({ label: 'Habitat', value: m.habitat })
+  } else if (entity.type === 'player') {
+    const m = meta as unknown as PlayerMetadata
+    if (m.playerClass) fields.push({ label: 'Class', value: m.playerClass })
+    if (m.race) fields.push({ label: 'Race', value: m.race })
+    if (m.level) fields.push({ label: 'Level', value: m.level })
+    if (m.player) fields.push({ label: 'Player', value: m.player })
   }
 
   if (fields.length === 0) return null

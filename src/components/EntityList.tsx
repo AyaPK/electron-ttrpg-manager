@@ -10,7 +10,9 @@ import { EntityForm } from './EntityForm'
 const TYPE_FILTERS: { type: EntityType | null; label: string }[] = [
   { type: null, label: 'All' },
   { type: 'npc', label: 'NPCs' },
-  { type: 'location', label: 'Locations' },
+  { type: 'monster', label: 'Monsters' },
+  { type: 'location', label: 'Places' },
+  { type: 'player', label: 'Players' },
   { type: 'faction', label: 'Factions' },
   { type: 'item', label: 'Items' },
 ]

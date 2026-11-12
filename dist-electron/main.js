@@ -4194,6 +4194,19 @@ var entities$1 = sqliteTable("entities", {
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull()
 }, (t) => [index("entities_campaign_id_idx").on(t.campaignId), index("entities_type_idx").on(t.type)]);
+var relationships$1 = sqliteTable("relationships", {
+	id: text("id").primaryKey(),
+	campaignId: text("campaign_id").notNull().references(() => campaigns$1.id),
+	sourceEntityId: text("source_entity_id").notNull().references(() => entities$1.id),
+	targetEntityId: text("target_entity_id").notNull().references(() => entities$1.id),
+	relationshipType: text("relationship_type").notNull(),
+	description: text("description"),
+	createdAt: integer("created_at").notNull()
+}, (t) => [
+	index("relationships_campaign_id_idx").on(t.campaignId),
+	index("relationships_source_entity_id_idx").on(t.sourceEntityId),
+	index("relationships_target_entity_id_idx").on(t.targetEntityId)
+]);
 // src/main/workspaces/workspaceService.ts
 var activeWorkspace = null;
 async function initialiseWorkspace() {
@@ -9276,7 +9289,9 @@ var EntityTypeSchema = _enum([
 	"npc",
 	"location",
 	"faction",
-	"item"
+	"item",
+	"monster",
+	"player"
 ]);
 var VisibilitySchema = _enum([
 	"private",
@@ -9308,6 +9323,19 @@ var EntityMetadataSchema = discriminatedUnion("type", [
 		itemType: string().optional(),
 		rarity: string().optional(),
 		attunement: boolean().optional()
+	}),
+	object({
+		type: literal("monster"),
+		monsterType: string().optional(),
+		challengeRating: string().optional(),
+		habitat: string().optional()
+	}),
+	object({
+		type: literal("player"),
+		playerClass: string().optional(),
+		race: string().optional(),
+		level: string().optional(),
+		player: string().optional()
 	})
 ]);
 var CreateEntitySchema = object({
@@ -9419,41 +9447,89 @@ function registerEntityHandlers() {
 			location: 0,
 			faction: 0,
 			item: 0,
+			monster: 0,
+			player: 0,
 			total: list.length
 		};
 		for (const e of list) counts[e.type]++;
 		return counts;
 	});
 }
-// node_modules/uuid/dist-node/stringify.js
-var byteToHex = [];
-for (let i = 0; i < 256; ++i) byteToHex.push((i + 256).toString(16).slice(1));
-function unsafeStringify(arr, offset = 0) {
-	return (byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + "-" + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + "-" + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + "-" + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + "-" + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]]).toLowerCase();
+var CreateRelationshipSchema = object({
+	campaignId: string().min(1),
+	sourceEntityId: string().min(1),
+	targetEntityId: string().min(1),
+	relationshipType: _enum([
+		"belongs_to",
+		"lives_in",
+		"controls",
+		"owns",
+		"allied_with",
+		"enemy_of",
+		"member_of",
+		"located_in",
+		"created_by",
+		"related_to"
+	]),
+	description: string().optional()
+});
+function deserialiseEntity(row) {
+	return {
+		id: row.id,
+		campaignId: row.campaignId,
+		type: row.type,
+		name: row.name,
+		description: row.description ?? null,
+		visibility: row.visibility,
+		metadata: JSON.parse(row.metadata),
+		createdAt: row.createdAt,
+		updatedAt: row.updatedAt
+	};
 }
-// node_modules/uuid/dist-node/rng.js
-var rnds8 = /* @__PURE__ */ new Uint8Array(16);
-function rng() {
-	return crypto.getRandomValues(rnds8);
+async function createRelationship(input) {
+	const data = CreateRelationshipSchema.parse(input);
+	const db = getDatabase();
+	if (data.sourceEntityId === data.targetEntityId) throw new Error("A relationship cannot link an entity to itself");
+	const row = {
+		id: (0, crypto$1.randomUUID)(),
+		campaignId: data.campaignId,
+		sourceEntityId: data.sourceEntityId,
+		targetEntityId: data.targetEntityId,
+		relationshipType: data.relationshipType,
+		description: data.description ?? null,
+		createdAt: Date.now()
+	};
+	await db.insert(relationships$1).values(row);
+	return row;
 }
-// node_modules/uuid/dist-node/v4.js
-function v4(options, buf, offset) {
-	if (!buf && !options && crypto.randomUUID) return crypto.randomUUID();
-	return _v4(options, buf, offset);
+async function getRelationshipsByEntity(entityId) {
+	const db = getDatabase();
+	const rows = await db.select().from(relationships$1).where(or(eq(relationships$1.sourceEntityId, entityId), eq(relationships$1.targetEntityId, entityId))).orderBy(relationships$1.createdAt);
+	return Promise.all(rows.map(async (rel) => {
+		const [src] = await db.select().from(entities$1).where(eq(entities$1.id, rel.sourceEntityId));
+		const [tgt] = await db.select().from(entities$1).where(eq(entities$1.id, rel.targetEntityId));
+		return {
+			...rel,
+			sourceEntity: src ? deserialiseEntity(src) : null,
+			targetEntity: tgt ? deserialiseEntity(tgt) : null
+		};
+	}));
 }
-function _v4(options, buf, offset) {
-	options = options || {};
-	const rnds = options.random ?? options.rng?.() ?? rng();
-	if (rnds.length < 16) throw new Error("Random bytes length must be >= 16");
-	rnds[6] = rnds[6] & 15 | 64;
-	rnds[8] = rnds[8] & 63 | 128;
-	if (buf) {
-		offset = offset || 0;
-		if (offset < 0 || offset + 16 > buf.length) throw new RangeError(`UUID byte range ${offset}:${offset + 15} is out of buffer bounds`);
-		for (let i = 0; i < 16; ++i) buf[offset + i] = rnds[i];
-		return buf;
-	}
-	return unsafeStringify(rnds);
+async function getRelationshipsByCampaign(campaignId) {
+	return getDatabase().select().from(relationships$1).where(eq(relationships$1.campaignId, campaignId)).orderBy(relationships$1.createdAt);
+}
+async function deleteRelationship(id, campaignId) {
+	await getDatabase().delete(relationships$1).where(and(eq(relationships$1.id, id), eq(relationships$1.campaignId, campaignId)));
+}
+// electron/handlers/relationships.ts
+function registerRelationshipHandlers() {
+	electron.ipcMain.handle("relationships:list", (_event, entityId) => getRelationshipsByEntity(entityId));
+	electron.ipcMain.handle("relationships:listByCampaign", (_event, campaignId) => getRelationshipsByCampaign(campaignId));
+	electron.ipcMain.handle("relationships:create", (_event, data) => createRelationship(data));
+	electron.ipcMain.handle("relationships:delete", async (_event, id, campaignId) => {
+		await deleteRelationship(id, campaignId);
+		return { success: true };
+	});
 }
 // electron/schema.ts
 var campaigns = sqliteTable("campaigns", {
@@ -9480,7 +9556,7 @@ var entities = sqliteTable("entities", {
 	createdAt: text("created_at").notNull(),
 	updatedAt: text("updated_at").notNull()
 });
-var relationships = sqliteTable("relationships", {
+sqliteTable("relationships", {
 	id: text("id").primaryKey(),
 	campaignId: text("campaign_id").notNull().references(() => campaigns.id, { onDelete: "cascade" }),
 	sourceEntityId: text("source_entity_id").notNull().references(() => entities.id, { onDelete: "cascade" }),
@@ -9493,44 +9569,6 @@ var settings = sqliteTable("settings", {
 	key: text("key").primaryKey(),
 	value: text("value").notNull()
 });
-// electron/handlers/relationships.ts
-function registerRelationshipHandlers() {
-	electron.ipcMain.handle("relationships:list", async (_event, entityId) => {
-		const db = getDatabase();
-		const rows = await db.select().from(relationships).where(or(eq(relationships.sourceEntityId, entityId), eq(relationships.targetEntityId, entityId)));
-		return await Promise.all(rows.map(async (rel) => {
-			const [source] = await db.select().from(entities).where(eq(entities.id, rel.sourceEntityId));
-			const [target] = await db.select().from(entities).where(eq(entities.id, rel.targetEntityId));
-			return {
-				...rel,
-				sourceEntity: source ?? null,
-				targetEntity: target ?? null
-			};
-		}));
-	});
-	electron.ipcMain.handle("relationships:listByCampaign", async (_event, campaignId) => {
-		return getDatabase().select().from(relationships).where(eq(relationships.campaignId, campaignId));
-	});
-	electron.ipcMain.handle("relationships:create", async (_event, data) => {
-		const db = getDatabase();
-		const now = (/* @__PURE__ */ new Date()).toISOString();
-		const rel = {
-			id: v4(),
-			campaignId: data.campaignId,
-			sourceEntityId: data.sourceEntityId,
-			targetEntityId: data.targetEntityId,
-			relationshipType: data.relationshipType,
-			description: data.description ?? "",
-			createdAt: now
-		};
-		await db.insert(relationships).values(rel);
-		return rel;
-	});
-	electron.ipcMain.handle("relationships:delete", async (_event, id) => {
-		await getDatabase().delete(relationships).where(eq(relationships.id, id));
-		return { success: true };
-	});
-}
 // electron/handlers/settings.ts
 function registerSettingsHandlers() {
 	electron.ipcMain.handle("settings:get", async (_event, key) => {

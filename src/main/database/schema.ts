@@ -48,3 +48,30 @@ export const entities = sqliteTable(
 
 export type DbEntity = typeof entities.$inferSelect
 export type NewDbEntity = typeof entities.$inferInsert
+
+export const relationships = sqliteTable(
+  'relationships',
+  {
+    id: text('id').primaryKey(),
+    campaignId: text('campaign_id')
+      .notNull()
+      .references(() => campaigns.id),
+    sourceEntityId: text('source_entity_id')
+      .notNull()
+      .references(() => entities.id),
+    targetEntityId: text('target_entity_id')
+      .notNull()
+      .references(() => entities.id),
+    relationshipType: text('relationship_type').notNull(),
+    description: text('description'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [
+    index('relationships_campaign_id_idx').on(t.campaignId),
+    index('relationships_source_entity_id_idx').on(t.sourceEntityId),
+    index('relationships_target_entity_id_idx').on(t.targetEntityId),
+  ],
+)
+
+export type DbRelationship = typeof relationships.$inferSelect
+export type NewDbRelationship = typeof relationships.$inferInsert

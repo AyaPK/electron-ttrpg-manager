@@ -1,4 +1,4 @@
-import { Users, MapPin, Shield, Package } from 'lucide-react'
+import { Users, MapPin, Shield, Package, Skull, Sword } from 'lucide-react'
 import type { EntityType } from '../../types/electron.d'
 
 const CONFIG: Record<EntityType, { label: string; color: string; icon: React.ReactNode }> = {
@@ -6,6 +6,8 @@ const CONFIG: Record<EntityType, { label: string; color: string; icon: React.Rea
   location: { label: 'Location', color: 'var(--location-color)', icon: <MapPin size={12} /> },
   faction: { label: 'Faction', color: 'var(--faction-color)', icon: <Shield size={12} /> },
   item: { label: 'Item', color: 'var(--item-color)', icon: <Package size={12} /> },
+  monster: { label: 'Monster', color: 'var(--monster-color)', icon: <Skull size={12} /> },
+  player: { label: 'Player', color: 'var(--player-color)', icon: <Sword size={12} /> },
 }
 
 export function EntityTypeBadge({ type, size = 'sm' }: { type: EntityType; size?: 'sm' | 'md' }) {

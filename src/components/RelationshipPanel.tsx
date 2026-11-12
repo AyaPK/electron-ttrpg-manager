@@ -55,8 +55,8 @@ export function RelationshipPanel({ entity }: RelationshipPanelProps) {
   }
 
   const handleDelete = async () => {
-    if (!deleteTarget) return
-    await window.api.relationships.delete(deleteTarget.id)
+    if (!deleteTarget || !activeCampaign) return
+    await window.api.relationships.delete(deleteTarget.id, activeCampaign.id)
     setDeleteTarget(null)
     load()
   }

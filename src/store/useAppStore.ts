@@ -1,11 +1,14 @@
 import { create } from 'zustand'
 import type { Campaign, Entity, EntityType } from '../types/electron.d'
 
+export type AppSection = 'world-bible'
+
 interface AppState {
   activeCampaignId: string | null
   activeCampaign: Campaign | null
   selectedEntityId: string | null
   view: 'campaign-select' | 'campaign-overview' | 'entity-list' | 'entity-detail' | 'settings'
+  appSection: AppSection | null
   entityTypeFilter: EntityType | null
   searchQuery: string
   sidebarOpen: boolean
@@ -20,6 +23,7 @@ interface AppState {
   navigateToEntity: (entityId: string) => void
   navigateToEntityList: (type?: EntityType | null) => void
   navigateToCampaignOverview: () => void
+  navigateToWorldBible: () => void
   navigateToCampaignSelect: () => void
 }
 
@@ -28,6 +32,7 @@ export const useAppStore = create<AppState>((set) => ({
   activeCampaign: null,
   selectedEntityId: null,
   view: 'campaign-select',
+  appSection: null,
   entityTypeFilter: null,
   searchQuery: '',
   sidebarOpen: true,
@@ -64,7 +69,10 @@ export const useAppStore = create<AppState>((set) => ({
     set({ view: 'entity-list', entityTypeFilter: type, selectedEntityId: null }),
 
   navigateToCampaignOverview: () =>
-    set({ view: 'campaign-overview', selectedEntityId: null }),
+    set({ view: 'campaign-overview', appSection: null, selectedEntityId: null }),
+
+  navigateToWorldBible: () =>
+    set({ view: 'campaign-overview', appSection: 'world-bible', selectedEntityId: null }),
 
   navigateToCampaignSelect: () =>
     set({

@@ -73,7 +73,7 @@ export function Sidebar() {
 
       <nav style={{ flex: 1, padding: '8px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
         <NavItem
-          label="Overview"
+          label="Hub"
           icon={<BookOpen size={15} />}
           active={isActive('campaign-overview')}
           hovered={hoveredItem === 'overview'}

@@ -20,6 +20,8 @@
   --location-color: #34d399;
   --faction-color: #fb923c;
   --item-color: #f472b6;
+  --monster-color: #f87171;
+  --player-color: #fbbf24;
 
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   font-size: 14px;

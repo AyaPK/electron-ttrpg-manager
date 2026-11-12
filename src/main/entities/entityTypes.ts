@@ -4,7 +4,7 @@ import { z } from 'zod'
 // Primitives
 // ---------------------------------------------------------------------------
 
-export const EntityTypeSchema = z.enum(['npc', 'location', 'faction', 'item'])
+export const EntityTypeSchema = z.enum(['npc', 'location', 'faction', 'item', 'monster', 'player'])
 export type EntityType = z.infer<typeof EntityTypeSchema>
 
 export const VisibilitySchema = z.enum(['private', 'campaign', 'players'])
@@ -43,6 +43,21 @@ export const ItemMetadataSchema = z.object({
   attunement: z.boolean().optional(),
 })
 
+export const MonsterMetadataSchema = z.object({
+  type: z.literal('monster'),
+  monsterType: z.string().optional(),
+  challengeRating: z.string().optional(),
+  habitat: z.string().optional(),
+})
+
+export const PlayerMetadataSchema = z.object({
+  type: z.literal('player'),
+  playerClass: z.string().optional(),
+  race: z.string().optional(),
+  level: z.string().optional(),
+  player: z.string().optional(),
+})
+
 // ---------------------------------------------------------------------------
 // Discriminated union
 // ---------------------------------------------------------------------------
@@ -52,12 +67,16 @@ export const EntityMetadataSchema = z.discriminatedUnion('type', [
   LocationMetadataSchema,
   FactionMetadataSchema,
   ItemMetadataSchema,
+  MonsterMetadataSchema,
+  PlayerMetadataSchema,
 ])
 
 export type NpcMetadata = z.infer<typeof NpcMetadataSchema>
 export type LocationMetadata = z.infer<typeof LocationMetadataSchema>
 export type FactionMetadata = z.infer<typeof FactionMetadataSchema>
 export type ItemMetadata = z.infer<typeof ItemMetadataSchema>
+export type MonsterMetadata = z.infer<typeof MonsterMetadataSchema>
+export type PlayerMetadata = z.infer<typeof PlayerMetadataSchema>
 export type EntityMetadata = z.infer<typeof EntityMetadataSchema>
 
 // ---------------------------------------------------------------------------

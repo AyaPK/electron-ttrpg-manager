@@ -8,7 +8,7 @@ export interface Campaign {
   updatedAt: number
 }
 
-export type EntityType = 'npc' | 'location' | 'faction' | 'item'
+export type EntityType = 'npc' | 'location' | 'faction' | 'item' | 'monster' | 'player'
 export type Visibility = 'private' | 'campaign' | 'players'
 
 export interface NpcMetadata {
@@ -40,7 +40,22 @@ export interface ItemMetadata {
   attunement?: boolean
 }
 
-export type EntityMetadata = NpcMetadata | LocationMetadata | FactionMetadata | ItemMetadata
+export interface MonsterMetadata {
+  type: 'monster'
+  monsterType?: string
+  challengeRating?: string
+  habitat?: string
+}
+
+export interface PlayerMetadata {
+  type: 'player'
+  playerClass?: string
+  race?: string
+  level?: string
+  player?: string
+}
+
+export type EntityMetadata = NpcMetadata | LocationMetadata | FactionMetadata | ItemMetadata | MonsterMetadata | PlayerMetadata
 
 export interface Entity {
   id: string
@@ -71,6 +86,8 @@ export interface EntityCounts {
   location: number
   faction: number
   item: number
+  monster: number
+  player: number
   total: number
 }
 
@@ -142,7 +159,7 @@ declare global {
           relationshipType: string
           description?: string
         }) => Promise<Relationship>
-        delete: (id: string) => Promise<{ success: boolean }>
+        delete: (id: string, campaignId: string) => Promise<{ success: boolean }>
       }
       settings: {
         get: (key: string) => Promise<string | null>

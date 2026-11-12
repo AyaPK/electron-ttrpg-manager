@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { EntityType, NpcMetadata, LocationMetadata, FactionMetadata, ItemMetadata } from '../types/electron.d'
+import type { EntityType, NpcMetadata, LocationMetadata, FactionMetadata, ItemMetadata, MonsterMetadata, PlayerMetadata } from '../types/electron.d'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { RichTextEditor } from './ui/RichTextEditor'
@@ -21,7 +21,9 @@ interface EntityFormProps {
 
 const TYPES: { value: EntityType; label: string }[] = [
   { value: 'npc', label: 'NPC' },
+  { value: 'monster', label: 'Monster' },
   { value: 'location', label: 'Location' },
+  { value: 'player', label: 'Player' },
   { value: 'faction', label: 'Faction' },
   { value: 'item', label: 'Item' },
 ]
@@ -177,6 +179,29 @@ function MetadataFields({ type, metadata, setMeta }: { type: EntityType; metadat
       <>
         <Input label="Item Type" value={m.itemType ?? ''} onChange={(v) => setMeta('itemType', v)} placeholder="Weapon, armour, artifact, consumable..." />
         <Input label="Rarity" value={m.rarity ?? ''} onChange={(v) => setMeta('rarity', v)} placeholder="Common, uncommon, rare, legendary..." />
+      </>
+    )
+  }
+
+  if (type === 'monster') {
+    const m = metadata as unknown as MonsterMetadata
+    return (
+      <>
+        <Input label="Monster Type" value={m.monsterType ?? ''} onChange={(v) => setMeta('monsterType', v)} placeholder="Beast, undead, dragon, humanoid..." />
+        <Input label="Challenge Rating" value={m.challengeRating ?? ''} onChange={(v) => setMeta('challengeRating', v)} placeholder="1/4, 1, 5, 20..." />
+        <Input label="Habitat" value={m.habitat ?? ''} onChange={(v) => setMeta('habitat', v)} placeholder="Forest, dungeon, arctic..." />
+      </>
+    )
+  }
+
+  if (type === 'player') {
+    const m = metadata as unknown as PlayerMetadata
+    return (
+      <>
+        <Input label="Class" value={m.playerClass ?? ''} onChange={(v) => setMeta('playerClass', v)} placeholder="Fighter, wizard, rogue..." />
+        <Input label="Race" value={m.race ?? ''} onChange={(v) => setMeta('race', v)} placeholder="Human, elf, dwarf..." />
+        <Input label="Level" value={m.level ?? ''} onChange={(v) => setMeta('level', v)} placeholder="1-20" />
+        <Input label="Player Name" value={m.player ?? ''} onChange={(v) => setMeta('player', v)} placeholder="Real-world player's name..." />
       </>
     )
   }
