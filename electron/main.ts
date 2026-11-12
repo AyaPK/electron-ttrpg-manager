@@ -6,6 +6,7 @@ import { registerCampaignHandlers } from './handlers/campaigns'
 import { registerEntityHandlers } from './handlers/entities'
 import { registerRelationshipHandlers } from './handlers/relationships'
 import { registerSettingsHandlers } from './handlers/settings'
+import { registerEncounterHandlers } from './handlers/encounters'
 
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged
@@ -69,6 +70,7 @@ app.whenReady().then(async () => {
   registerEntityHandlers()
   registerRelationshipHandlers()
   registerSettingsHandlers()
+  registerEncounterHandlers()
   createWindow()
 })
 

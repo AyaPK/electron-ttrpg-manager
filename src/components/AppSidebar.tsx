@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpen, Home } from 'lucide-react'
+import { BookOpen, Home, Swords } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import type { AppSection } from '../store/useAppStore'
 
@@ -17,10 +17,16 @@ const SECTIONS: SectionDef[] = [
     icon: <BookOpen size={18} />,
     color: 'var(--accent)',
   },
+  {
+    id: 'encounters',
+    label: 'Encounters',
+    icon: <Swords size={18} />,
+    color: '#f87171',
+  },
 ]
 
 export function AppSidebar() {
-  const { appSection, activeCampaign, navigateToCampaignOverview, navigateToWorldBible } = useAppStore()
+  const { appSection, activeCampaign, navigateToCampaignOverview, navigateToWorldBible, navigateToEncounters } = useAppStore()
   const [hoveredItem, setHoveredItem] = useState<string | null>(null)
 
   if (!activeCampaign) return null
@@ -48,7 +54,7 @@ export function AppSidebar() {
           <button
             key={section.id}
             title={section.label}
-            onClick={navigateToWorldBible}
+            onClick={section.id === 'world-bible' ? navigateToWorldBible : navigateToEncounters}
             onMouseEnter={() => setHoveredItem(section.id)}
             onMouseLeave={() => setHoveredItem(null)}
             style={{

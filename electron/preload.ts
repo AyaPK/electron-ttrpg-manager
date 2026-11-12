@@ -50,6 +50,25 @@ const api = {
     set: (key: string, value: string) => ipcRenderer.invoke('settings:set', key, value),
     getAll: () => ipcRenderer.invoke('settings:getAll'),
   },
+  encounters: {
+    list: (campaignId: string) => ipcRenderer.invoke('encounters:list', campaignId),
+    get: (id: string, campaignId: string) => ipcRenderer.invoke('encounters:get', id, campaignId),
+    create: (data: { campaignId: string; name: string; description?: string; notes?: string }) =>
+      ipcRenderer.invoke('encounters:create', data),
+    update: (id: string, campaignId: string, data: { name?: string; description?: string; notes?: string; status?: string }) =>
+      ipcRenderer.invoke('encounters:update', id, campaignId, data),
+    delete: (id: string, campaignId: string) => ipcRenderer.invoke('encounters:delete', id, campaignId),
+    createGroup: (data: { encounterId: string; name: string; sortOrder?: number }) =>
+      ipcRenderer.invoke('encounters:createGroup', data),
+    updateGroup: (id: string, data: { name?: string; sortOrder?: number }) =>
+      ipcRenderer.invoke('encounters:updateGroup', id, data),
+    deleteGroup: (id: string) => ipcRenderer.invoke('encounters:deleteGroup', id),
+    createEntry: (data: { groupId: string; encounterId: string; name: string; cr?: string; count?: number; notes?: string; sortOrder?: number }) =>
+      ipcRenderer.invoke('encounters:createEntry', data),
+    updateEntry: (id: string, data: { name?: string; cr?: string; count?: number; notes?: string }) =>
+      ipcRenderer.invoke('encounters:updateEntry', id, data),
+    deleteEntry: (id: string) => ipcRenderer.invoke('encounters:deleteEntry', id),
+  },
 }
 
 contextBridge.exposeInMainWorld('api', api)

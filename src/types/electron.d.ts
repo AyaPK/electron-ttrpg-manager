@@ -119,6 +119,39 @@ export const RELATIONSHIP_LABELS: Record<string, string> = {
   related_to: 'Related To',
 }
 
+export type EncounterStatus = 'draft' | 'ready' | 'complete'
+
+export interface EncounterEntry {
+  id: string
+  groupId: string
+  encounterId: string
+  name: string
+  cr: string
+  count: number
+  notes: string | null
+  sortOrder: number
+}
+
+export interface EncounterGroup {
+  id: string
+  encounterId: string
+  name: string
+  sortOrder: number
+  entries: EncounterEntry[]
+}
+
+export interface Encounter {
+  id: string
+  campaignId: string
+  name: string
+  description: string | null
+  status: EncounterStatus
+  notes: string | null
+  createdAt: number
+  updatedAt: number
+  groups: EncounterGroup[]
+}
+
 declare global {
   interface Window {
     api: {
@@ -165,6 +198,19 @@ declare global {
         get: (key: string) => Promise<string | null>
         set: (key: string, value: string) => Promise<{ success: boolean }>
         getAll: () => Promise<Record<string, string>>
+      }
+      encounters: {
+        list: (campaignId: string) => Promise<Encounter[]>
+        get: (id: string, campaignId: string) => Promise<Encounter | null>
+        create: (data: { campaignId: string; name: string; description?: string; notes?: string }) => Promise<Encounter>
+        update: (id: string, campaignId: string, data: { name?: string; description?: string; notes?: string; status?: EncounterStatus }) => Promise<Encounter>
+        delete: (id: string, campaignId: string) => Promise<{ success: boolean }>
+        createGroup: (data: { encounterId: string; name: string; sortOrder?: number }) => Promise<EncounterGroup>
+        updateGroup: (id: string, data: { name?: string; sortOrder?: number }) => Promise<EncounterGroup>
+        deleteGroup: (id: string) => Promise<{ success: boolean }>
+        createEntry: (data: { groupId: string; encounterId: string; name: string; cr?: string; count?: number; notes?: string; sortOrder?: number }) => Promise<EncounterEntry>
+        updateEntry: (id: string, data: { name?: string; cr?: string; count?: number; notes?: string }) => Promise<EncounterEntry>
+        deleteEntry: (id: string) => Promise<{ success: boolean }>
       }
     }
   }

@@ -3,6 +3,7 @@ import { AppSidebar } from './components/AppSidebar'
 import { Sidebar } from './components/Sidebar'
 import { CampaignSelect } from './components/CampaignSelect'
 import { CampaignHub } from './components/CampaignHub'
+import { EncounterCreator } from './components/EncounterCreator'
 import { EntityList } from './components/EntityList'
 import { EntityDetail } from './components/EntityDetail'
 import { SettingsPanel } from './components/SettingsPanel'
@@ -14,6 +15,7 @@ function App() {
     switch (view) {
       case 'campaign-select': return <CampaignSelect />
       case 'campaign-overview': return <CampaignHub />
+      case 'encounters': return <EncounterCreator />
       case 'entity-list': return <EntityList />
       case 'entity-detail': return <EntityDetail />
       case 'settings': return <SettingsPanel />
