@@ -12,8 +12,8 @@ interface EntityFormProps {
   initialValues?: {
     name: string
     type: EntityType
-    description: string
-    visibility: 'public' | 'private'
+    description: string | null
+    visibility: 'private' | 'campaign' | 'players'
     metadata: Record<string, unknown>
   }
   entityId?: string
@@ -30,7 +30,7 @@ export function EntityForm({ campaignId, defaultType = 'npc', onSaved, onCancel,
   const [name, setName] = useState(initialValues?.name ?? '')
   const [type, setType] = useState<EntityType>(initialValues?.type ?? defaultType)
   const [description, setDescription] = useState(initialValues?.description ?? '')
-  const [visibility, setVisibility] = useState<'public' | 'private'>(initialValues?.visibility ?? 'public')
+  const [visibility, setVisibility] = useState<'private' | 'campaign' | 'players'>(initialValues?.visibility ?? 'campaign')
   const [metadata, setMetadata] = useState<Record<string, unknown>>(initialValues?.metadata ?? {})
   const [saving, setSaving] = useState(false)
 
@@ -38,9 +38,16 @@ export function EntityForm({ campaignId, defaultType = 'npc', onSaved, onCancel,
     if (!name.trim()) return
     setSaving(true)
     if (entityId) {
-      await window.api.entities.update(entityId, { name, description, visibility, metadata })
+      await window.api.entities.update(entityId, campaignId, { name, description: description || undefined, visibility, metadata })
     } else {
-      await window.api.entities.create({ campaignId, name, type, description, visibility, metadata })
+      await window.api.entities.create({
+        campaignId,
+        type,
+        name,
+        description: description || undefined,
+        visibility,
+        metadata: { ...metadata, type },
+      })
     }
     setSaving(false)
     onSaved()
@@ -90,7 +97,7 @@ export function EntityForm({ campaignId, defaultType = 'npc', onSaved, onCancel,
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <label style={labelStyle}>Visibility</label>
         <div style={{ display: 'flex', gap: 6 }}>
-          {(['public', 'private'] as const).map((v) => (
+          {(['private', 'campaign', 'players'] as const).map((v) => (
             <button
               key={v}
               onClick={() => setVisibility(v)}
@@ -125,10 +132,12 @@ function MetadataFields({ type, metadata, setMeta }: { type: EntityType; metadat
   const str = (k: string) => ((metadata as Record<string, string>)[k]) ?? ''
 
   if (type === 'npc') {
-    const m = metadata as NpcMetadata
+    const m = metadata as unknown as NpcMetadata
     return (
       <>
         <Input label="Occupation" value={m.occupation ?? ''} onChange={(v) => setMeta('occupation', v)} placeholder="Knight, merchant, priest..." />
+        <Input label="Race" value={m.race ?? ''} onChange={(v) => setMeta('race', v)} placeholder="Human, elf, dwarf..." />
+        <Input label="Affiliation" value={m.affiliation ?? ''} onChange={(v) => setMeta('affiliation', v)} placeholder="Faction or group..." />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <label style={labelStyle}>Personality</label>
           <textarea rows={2} value={m.personality ?? ''} onChange={(e) => setMeta('personality', e.target.value)} placeholder="Brave, cunning, shy..." style={{ resize: 'vertical', width: '100%' }} />
@@ -138,23 +147,38 @@ function MetadataFields({ type, metadata, setMeta }: { type: EntityType; metadat
   }
 
   if (type === 'location') {
-    const m = metadata as LocationMetadata
-    return <Input label="Location Type" value={m.locationType ?? ''} onChange={(v) => setMeta('locationType', v)} placeholder="City, dungeon, forest, tavern..." />
+    const m = metadata as unknown as LocationMetadata
+    return (
+      <>
+        <Input label="Location Type" value={m.locationType ?? ''} onChange={(v) => setMeta('locationType', v)} placeholder="City, dungeon, forest, tavern..." />
+        <Input label="Region" value={m.region ?? ''} onChange={(v) => setMeta('region', v)} placeholder="Northern Reach, Underdark..." />
+        <Input label="Population" value={m.population ?? ''} onChange={(v) => setMeta('population', v)} placeholder="Sparse, hundreds, thousands..." />
+      </>
+    )
   }
 
   if (type === 'faction') {
-    const m = metadata as FactionMetadata
+    const m = metadata as unknown as FactionMetadata
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <label style={labelStyle}>Goals</label>
-        <textarea rows={2} value={m.goals ?? ''} onChange={(e) => setMeta('goals', e.target.value)} placeholder="Domination, peace, revenge..." style={{ resize: 'vertical', width: '100%' }} />
-      </div>
+      <>
+        <Input label="Alignment" value={m.alignment ?? ''} onChange={(v) => setMeta('alignment', v)} placeholder="Lawful good, chaotic evil..." />
+        <Input label="Headquarters" value={m.headquarters ?? ''} onChange={(v) => setMeta('headquarters', v)} placeholder="Location of base..." />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={labelStyle}>Goals</label>
+          <textarea rows={2} value={m.goals ?? ''} onChange={(e) => setMeta('goals', e.target.value)} placeholder="Domination, peace, revenge..." style={{ resize: 'vertical', width: '100%' }} />
+        </div>
+      </>
     )
   }
 
   if (type === 'item') {
-    const m = metadata as ItemMetadata
-    return <Input label="Item Type" value={m.itemType ?? ''} onChange={(v) => setMeta('itemType', v)} placeholder="Weapon, armour, artifact, consumable..." />
+    const m = metadata as unknown as ItemMetadata
+    return (
+      <>
+        <Input label="Item Type" value={m.itemType ?? ''} onChange={(v) => setMeta('itemType', v)} placeholder="Weapon, armour, artifact, consumable..." />
+        <Input label="Rarity" value={m.rarity ?? ''} onChange={(v) => setMeta('rarity', v)} placeholder="Common, uncommon, rare, legendary..." />
+      </>
+    )
   }
 
   return <input type="hidden" value={str('_')} />

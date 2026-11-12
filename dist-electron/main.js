@@ -4183,7 +4183,7 @@ var campaigns$1 = sqliteTable("campaigns", {
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull()
 });
-sqliteTable("entities", {
+var entities$1 = sqliteTable("entities", {
 	id: text("id").primaryKey(),
 	campaignId: text("campaign_id").notNull().references(() => campaigns$1.id),
 	type: text("type").notNull(),
@@ -5232,6 +5232,7 @@ function datetime(args) {
 	return new RegExp(`^${dateSource}T(?:${timeRegex})$`);
 }
 var anyString = /^[\s\S]{0,}$/;
+var boolean$1 = /^(?:true|false)$/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 // node_modules/zod/v4/core/checks.js
@@ -5891,6 +5892,24 @@ var $ZodJWT = /*@__PURE__*/ $constructor("$ZodJWT", (inst, def) => {
 		});
 	};
 });
+var $ZodBoolean = /*@__PURE__*/ $constructor("$ZodBoolean", (inst, def) => {
+	$ZodType.init(inst, def);
+	inst._zod.pattern = boolean$1;
+	inst._zod.parse = (payload, _ctx) => {
+		if (def.coerce) try {
+			payload.value = Boolean(payload.value);
+		} catch (_) {}
+		const input = payload.value;
+		if (typeof input === "boolean") return payload;
+		payload.issues.push({
+			expected: "boolean",
+			code: "invalid_type",
+			input,
+			inst
+		});
+		return payload;
+	};
+});
 var $ZodUnknown = /*@__PURE__*/ $constructor("$ZodUnknown", (inst, def) => {
 	$ZodType.init(inst, def);
 	inst._zod.parse = (payload) => payload;
@@ -6292,6 +6311,70 @@ var $ZodUnion = /*@__PURE__*/ $constructor("$ZodUnion", (inst, def) => {
 		});
 	};
 });
+function discriminatorMap(def) {
+	const map = /* @__PURE__ */ new Map();
+	for (const option of def.options) {
+		const values = option._zod.propValues?.[def.discriminator];
+		if (!values || values.size === 0) throw new Error(`Invalid discriminated union option at index "${def.options.indexOf(option)}"`);
+		for (const value of values) if (map.has(value)) {
+			if (value !== void 0) throw new Error(`Duplicate discriminator value "${String(value)}"`);
+			map.set(value, null);
+		} else map.set(value, option);
+	}
+	return map;
+}
+var $ZodDiscriminatedUnion = /*@__PURE__*/ $constructor("$ZodDiscriminatedUnion", (inst, def) => {
+	def.inclusive = false;
+	$ZodUnion.init(inst, def);
+	const _super = inst._zod.parse;
+	defineLazyInternal(inst, "propValues", (zod) => {
+		const propValues = {};
+		let undefinedCount = 0;
+		for (const option of zod.def.options) {
+			const pv = option._zod.propValues;
+			if (!pv || Object.keys(pv).length === 0) throw new Error(`Invalid discriminated union option at index "${zod.def.options.indexOf(option)}"`);
+			if (pv[zod.def.discriminator]?.has(void 0)) undefinedCount++;
+			for (const [k, v] of Object.entries(pv)) {
+				if (!Object.prototype.hasOwnProperty.call(propValues, k)) assignProp(propValues, k, /* @__PURE__ */ new Set());
+				for (const val of v) propValues[k].add(val);
+			}
+		}
+		if (!zod.def.unionFallback && undefinedCount > 1) propValues[zod.def.discriminator]?.delete(void 0);
+		return propValues;
+	});
+	def.options.forEach((option, i) => {
+		const propShape = rawShape(option._zod.def);
+		if (propShape && !Object.prototype.hasOwnProperty.call(propShape, def.discriminator)) throw new Error(`Invalid discriminated union option at index "${i}"`);
+	});
+	const disc = cached(() => discriminatorMap(def));
+	inst._zod.parse = (payload, ctx) => {
+		const input = payload.value;
+		if (!isObject(input)) {
+			payload.issues.push({
+				code: "invalid_type",
+				expected: "object",
+				input,
+				inst
+			});
+			return payload;
+		}
+		const value = input?.[def.discriminator];
+		const opt = disc.value.get(value);
+		if (opt && (value !== void 0 || ctx.direction !== "backward")) return opt._zod.run(payload, ctx);
+		if (def.unionFallback || ctx.direction === "backward") return _super(payload, ctx);
+		payload.issues.push({
+			code: "invalid_union",
+			errors: [],
+			note: "No matching discriminator",
+			discriminator: def.discriminator,
+			options: Array.from(disc.value.keys()).filter((value) => disc.value.get(value) !== null),
+			input,
+			path: [def.discriminator],
+			inst
+		});
+		return payload;
+	};
+});
 var $ZodIntersection = /*@__PURE__*/ $constructor("$ZodIntersection", (inst, def) => {
 	$ZodType.init(inst, def);
 	inst._zod.parse = (payload, ctx) => {
@@ -6421,6 +6504,26 @@ var $ZodEnum = /*@__PURE__*/ $constructor("$ZodEnum", (inst, def) => {
 		payload.issues.push({
 			code: "invalid_value",
 			values,
+			input,
+			inst
+		});
+		return payload;
+	};
+});
+var $ZodLiteral = /*@__PURE__*/ $constructor("$ZodLiteral", (inst, def) => {
+	$ZodType.init(inst, def);
+	const values = new Set(def.values);
+	inst._zod.values = values;
+	defineLazyInternal(inst, "pattern", (zod) => {
+		const vals = zod.def.values;
+		return new RegExp(vals.length ? `^(${vals.map((o) => typeof o === "string" ? escapeRegex(o) : o ? escapeRegex(o.toString()) : String(o)).join("|")})$` : "^[^\\s\\S]$");
+	});
+	inst._zod.parse = (payload, _ctx) => {
+		const input = payload.value;
+		if (values.has(input)) return payload;
+		payload.issues.push({
+			code: "invalid_value",
+			values: def.values,
 			input,
 			inst
 		});
@@ -7334,6 +7437,13 @@ function _isoDuration(Class, params) {
 	});
 }
 // @__NO_SIDE_EFFECTS__
+function _boolean(Class, params) {
+	return new Class({
+		type: "boolean",
+		...normalizeParams(params)
+	});
+}
+// @__NO_SIDE_EFFECTS__
 function _unknown(Class) {
 	return new Class({ type: "unknown" });
 }
@@ -8038,6 +8148,9 @@ var stringProcessor = (schema, ctx, _json, _params) => {
 		}))];
 	}
 };
+var booleanProcessor = (_schema, _ctx, json, _params) => {
+	json.type = "boolean";
+};
 var neverProcessor = (_schema, _ctx, json, _params) => {
 	json.not = {};
 };
@@ -8051,6 +8164,32 @@ var enumProcessor = (schema, _ctx, json, _params) => {
 	if (values.every((v) => typeof v === "number")) json.type = "number";
 	if (values.every((v) => typeof v === "string")) json.type = "string";
 	json.enum = values;
+};
+var literalProcessor = (schema, ctx, json, params) => {
+	const def = schema._zod.def;
+	if (def.values.length === 0) {
+		json.not = {};
+		return;
+	}
+	const vals = [];
+	for (const val of def.values) if (val === void 0) {
+		if (handleUnrepresentable(schema, ctx, json, params, "Literal `undefined` cannot be represented in JSON Schema")) return;
+	} else if (typeof val === "bigint") {
+		if (handleUnrepresentable(schema, ctx, json, params, "BigInt literals cannot be represented in JSON Schema")) return;
+		vals.push(Number(val));
+	} else vals.push(val);
+	if (vals.length === 0) {} else if (vals.length === 1) {
+		const val = vals[0];
+		json.type = val === null ? "null" : typeof val;
+		if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") json.enum = [val];
+		else json.const = val;
+	} else {
+		if (vals.every((v) => typeof v === "number")) json.type = "number";
+		if (vals.every((v) => typeof v === "string")) json.type = "string";
+		if (vals.every((v) => typeof v === "boolean")) json.type = "boolean";
+		if (vals.every((v) => v === null)) json.type = "null";
+		json.enum = vals;
+	}
 };
 var customProcessor = (schema, ctx, json, params) => {
 	handleUnrepresentable(schema, ctx, json, params, "Custom types cannot be represented in JSON Schema");
@@ -8705,6 +8844,14 @@ var ZodJWT = /*@__PURE__*/ $constructor("ZodJWT", (inst, def) => {
 	$ZodJWT.init(inst, def);
 	ZodStringFormat.init(inst, def);
 });
+var ZodBoolean = /*@__PURE__*/ $constructor("ZodBoolean", (inst, def) => {
+	$ZodBoolean.init(inst, def);
+	ZodType.init(inst, def);
+	inst._zod.processJSONSchema = (ctx, json, params) => booleanProcessor(inst, ctx, json, params);
+});
+function boolean(params) {
+	return /* @__PURE__ */ _boolean(ZodBoolean, params);
+}
 var ZodUnknown = /*@__PURE__*/ $constructor("ZodUnknown", (inst, def) => {
 	$ZodUnknown.init(inst, def);
 	ZodType.init(inst, def);
@@ -8817,6 +8964,18 @@ function union(options, params) {
 		...normalizeParams(params)
 	});
 }
+var ZodDiscriminatedUnion = /*@__PURE__*/ $constructor("ZodDiscriminatedUnion", (inst, def) => {
+	ZodUnion.init(inst, def);
+	$ZodDiscriminatedUnion.init(inst, def);
+});
+function discriminatedUnion(discriminator, options, params) {
+	return new ZodDiscriminatedUnion({
+		type: "union",
+		options,
+		discriminator,
+		...normalizeParams(params)
+	});
+}
 var ZodIntersection = /*@__PURE__*/ $constructor("ZodIntersection", (inst, def) => {
 	$ZodIntersection.init(inst, def);
 	ZodType.init(inst, def);
@@ -8863,6 +9022,23 @@ function _enum(values, params) {
 	return new ZodEnum({
 		type: "enum",
 		entries: Array.isArray(values) ? Object.fromEntries(values.map((v) => [v, v])) : values,
+		...normalizeParams(params)
+	});
+}
+var ZodLiteral = /*@__PURE__*/ $constructor("ZodLiteral", (inst, def) => {
+	$ZodLiteral.init(inst, def);
+	ZodType.init(inst, def);
+	inst._zod.processJSONSchema = (ctx, json, params) => literalProcessor(inst, ctx, json, params);
+	inst.values = new Set(def.values);
+	Object.defineProperty(inst, "value", { get() {
+		if (def.values.length > 1) throw new Error("This schema contains multiple valid literal values. Use `.values` instead.");
+		return def.values[0];
+	} });
+});
+function literal(value, params) {
+	return new ZodLiteral({
+		type: "literal",
+		values: Array.isArray(value) ? value : [value],
 		...normalizeParams(params)
 	});
 }
@@ -9095,6 +9271,160 @@ function registerCampaignHandlers() {
 		return { success: true };
 	});
 }
+// src/main/entities/entityTypes.ts
+var EntityTypeSchema = _enum([
+	"npc",
+	"location",
+	"faction",
+	"item"
+]);
+var VisibilitySchema = _enum([
+	"private",
+	"campaign",
+	"players"
+]);
+var EntityMetadataSchema = discriminatedUnion("type", [
+	object({
+		type: literal("npc"),
+		occupation: string().optional(),
+		personality: string().optional(),
+		race: string().optional(),
+		affiliation: string().optional()
+	}),
+	object({
+		type: literal("location"),
+		locationType: string().optional(),
+		region: string().optional(),
+		population: string().optional()
+	}),
+	object({
+		type: literal("faction"),
+		goals: string().optional(),
+		alignment: string().optional(),
+		headquarters: string().optional()
+	}),
+	object({
+		type: literal("item"),
+		itemType: string().optional(),
+		rarity: string().optional(),
+		attunement: boolean().optional()
+	})
+]);
+var CreateEntitySchema = object({
+	campaignId: string().min(1),
+	type: EntityTypeSchema,
+	name: string().min(1),
+	description: string().optional(),
+	visibility: VisibilitySchema.default("campaign"),
+	metadata: EntityMetadataSchema
+}).refine((v) => v.metadata.type === v.type, {
+	message: "metadata.type must match entity type",
+	path: ["metadata", "type"]
+});
+var UpdateEntitySchema = object({
+	name: string().min(1).optional(),
+	description: string().optional(),
+	visibility: VisibilitySchema.optional(),
+	metadata: EntityMetadataSchema.optional()
+});
+// src/main/entities/entityService.ts
+function deserialise(row) {
+	return {
+		id: row.id,
+		campaignId: row.campaignId,
+		type: EntityTypeSchema.parse(row.type),
+		name: row.name,
+		description: row.description ?? null,
+		visibility: row.visibility,
+		metadata: JSON.parse(row.metadata),
+		createdAt: row.createdAt,
+		updatedAt: row.updatedAt
+	};
+}
+var EntityFilterSchema = object({
+	type: EntityTypeSchema.optional(),
+	search: string().optional()
+});
+async function createEntity(input) {
+	const data = CreateEntitySchema.parse(input);
+	const db = getDatabase();
+	const now = Date.now();
+	const row = {
+		id: (0, crypto$1.randomUUID)(),
+		campaignId: data.campaignId,
+		type: data.type,
+		name: data.name,
+		description: data.description ?? null,
+		visibility: data.visibility,
+		metadata: JSON.stringify(data.metadata),
+		createdAt: now,
+		updatedAt: now
+	};
+	await db.insert(entities$1).values(row);
+	return deserialise(row);
+}
+async function getEntities(campaignId, filter) {
+	const { type, search } = EntityFilterSchema.parse(filter ?? {});
+	const db = getDatabase();
+	const conditions = [eq(entities$1.campaignId, campaignId)];
+	if (type) conditions.push(eq(entities$1.type, type));
+	const results = (await db.select().from(entities$1).where(and(...conditions)).orderBy(entities$1.updatedAt)).map(deserialise);
+	if (search) {
+		const q = search.toLowerCase();
+		return results.filter((e) => e.name.toLowerCase().includes(q) || (e.description?.toLowerCase().includes(q) ?? false));
+	}
+	return results;
+}
+async function getEntityById(id, campaignId) {
+	const rows = await getDatabase().select().from(entities$1).where(and(eq(entities$1.id, id), eq(entities$1.campaignId, campaignId)));
+	return rows[0] ? deserialise(rows[0]) : null;
+}
+async function updateEntity(id, campaignId, input) {
+	const data = UpdateEntitySchema.parse(input);
+	const db = getDatabase();
+	const existing = await getEntityById(id, campaignId);
+	if (!existing) throw new Error(`Entity not found in campaign: ${id}`);
+	const patch = { updatedAt: Date.now() };
+	if (data.name !== void 0) patch.name = data.name;
+	if (data.description !== void 0) patch.description = data.description;
+	if (data.visibility !== void 0) patch.visibility = data.visibility;
+	if (data.metadata !== void 0) patch.metadata = JSON.stringify(data.metadata);
+	await db.update(entities$1).set(patch).where(and(eq(entities$1.id, id), eq(entities$1.campaignId, campaignId)));
+	return {
+		...existing,
+		...data.name !== void 0 && { name: data.name },
+		...data.description !== void 0 && { description: data.description },
+		...data.visibility !== void 0 && { visibility: data.visibility },
+		...data.metadata !== void 0 && { metadata: data.metadata },
+		updatedAt: patch.updatedAt
+	};
+}
+async function deleteEntity(id, campaignId) {
+	await getDatabase().delete(entities$1).where(and(eq(entities$1.id, id), eq(entities$1.campaignId, campaignId)));
+}
+// electron/handlers/entities.ts
+function registerEntityHandlers() {
+	electron.ipcMain.handle("entities:list", (_event, campaignId, filters) => getEntities(campaignId, filters));
+	electron.ipcMain.handle("entities:get", (_event, id, campaignId) => getEntityById(id, campaignId));
+	electron.ipcMain.handle("entities:create", (_event, data) => createEntity(data));
+	electron.ipcMain.handle("entities:update", (_event, id, campaignId, data) => updateEntity(id, campaignId, data));
+	electron.ipcMain.handle("entities:delete", async (_event, id, campaignId) => {
+		await deleteEntity(id, campaignId);
+		return { success: true };
+	});
+	electron.ipcMain.handle("entities:counts", async (_event, campaignId) => {
+		const list = await getEntities(campaignId);
+		const counts = {
+			npc: 0,
+			location: 0,
+			faction: 0,
+			item: 0,
+			total: list.length
+		};
+		for (const e of list) counts[e.type]++;
+		return counts;
+	});
+}
 // node_modules/uuid/dist-node/stringify.js
 var byteToHex = [];
 for (let i = 0; i < 256; ++i) byteToHex.push((i + 256).toString(16).slice(1));
@@ -9163,71 +9493,6 @@ var settings = sqliteTable("settings", {
 	key: text("key").primaryKey(),
 	value: text("value").notNull()
 });
-// electron/handlers/entities.ts
-function registerEntityHandlers() {
-	electron.ipcMain.handle("entities:list", async (_event, campaignId, filters) => {
-		const db = getDatabase();
-		let query = db.select().from(entities).where(eq(entities.campaignId, campaignId));
-		if (filters?.type) query = db.select().from(entities).where(and(eq(entities.campaignId, campaignId), eq(entities.type, filters.type)));
-		if (filters?.search) query = db.select().from(entities).where(and(eq(entities.campaignId, campaignId), like(entities.name, `%${filters.search}%`)));
-		if (filters?.type && filters?.search) query = db.select().from(entities).where(and(eq(entities.campaignId, campaignId), eq(entities.type, filters.type), like(entities.name, `%${filters.search}%`)));
-		return query.orderBy(entities.updatedAt);
-	});
-	electron.ipcMain.handle("entities:get", async (_event, id) => {
-		return (await getDatabase().select().from(entities).where(eq(entities.id, id)))[0] ?? null;
-	});
-	electron.ipcMain.handle("entities:create", async (_event, data) => {
-		const db = getDatabase();
-		const now = (/* @__PURE__ */ new Date()).toISOString();
-		const entity = {
-			id: v4(),
-			campaignId: data.campaignId,
-			name: data.name,
-			type: data.type,
-			visibility: data.visibility ?? "public",
-			description: data.description ?? "",
-			metadata: JSON.stringify(data.metadata ?? {}),
-			createdAt: now,
-			updatedAt: now
-		};
-		await db.insert(entities).values(entity);
-		return {
-			...entity,
-			metadata: data.metadata ?? {}
-		};
-	});
-	electron.ipcMain.handle("entities:update", async (_event, id, data) => {
-		const db = getDatabase();
-		const updateData = { updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
-		if (data.name !== void 0) updateData.name = data.name;
-		if (data.description !== void 0) updateData.description = data.description;
-		if (data.visibility !== void 0) updateData.visibility = data.visibility;
-		if (data.metadata !== void 0) updateData.metadata = JSON.stringify(data.metadata);
-		await db.update(entities).set(updateData).where(eq(entities.id, id));
-		const result = await db.select().from(entities).where(eq(entities.id, id));
-		if (!result[0]) return null;
-		return {
-			...result[0],
-			metadata: JSON.parse(result[0].metadata)
-		};
-	});
-	electron.ipcMain.handle("entities:delete", async (_event, id) => {
-		await getDatabase().delete(entities).where(eq(entities.id, id));
-		return { success: true };
-	});
-	electron.ipcMain.handle("entities:counts", async (_event, campaignId) => {
-		const all = await getDatabase().select().from(entities).where(eq(entities.campaignId, campaignId));
-		const counts = {
-			npc: 0,
-			location: 0,
-			faction: 0,
-			item: 0,
-			total: all.length
-		};
-		for (const e of all) counts[e.type]++;
-		return counts;
-	});
-}
 // electron/handlers/relationships.ts
 function registerRelationshipHandlers() {
 	electron.ipcMain.handle("relationships:list", async (_event, entityId) => {

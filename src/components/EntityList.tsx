@@ -44,8 +44,8 @@ export function EntityList() {
   useEffect(() => { load() }, [load])
 
   const handleDelete = async () => {
-    if (!deleteTarget) return
-    await window.api.entities.delete(deleteTarget.id)
+    if (!deleteTarget || !activeCampaign) return
+    await window.api.entities.delete(deleteTarget.id, activeCampaign.id)
     setDeleteTarget(null)
     load()
   }

@@ -10,18 +10,16 @@ import { EntityForm } from './EntityForm'
 import { RelationshipPanel } from './RelationshipPanel'
 
 export function EntityDetail() {
-  const { selectedEntityId, navigateToEntityList, entityTypeFilter } = useAppStore()
+  const { selectedEntityId, activeCampaign, navigateToEntityList, entityTypeFilter } = useAppStore()
   const [entity, setEntity] = useState<Entity | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [showDelete, setShowDelete] = useState(false)
 
   const load = async (id: string) => {
+    if (!activeCampaign) return
     setLoading(true)
-    const e = await window.api.entities.get(id)
-    if (e && typeof e.metadata === 'string') {
-      e.metadata = JSON.parse(e.metadata as unknown as string)
-    }
+    const e = await window.api.entities.get(id, activeCampaign.id)
     setEntity(e)
     setLoading(false)
   }
@@ -36,8 +34,8 @@ export function EntityDetail() {
   }
 
   const handleDelete = async () => {
-    if (!entity) return
-    await window.api.entities.delete(entity.id)
+    if (!entity || !activeCampaign) return
+    await window.api.entities.delete(entity.id, activeCampaign.id)
     navigateToEntityList(entityTypeFilter)
   }
 
@@ -118,7 +116,7 @@ export function EntityDetail() {
               name: entity.name,
               type: entity.type,
               description: entity.description,
-              visibility: entity.visibility,
+              visibility: entity.visibility as 'private' | 'campaign' | 'players',
               metadata: entity.metadata as Record<string, unknown>,
             }}
             onSaved={handleSaved}
@@ -147,18 +145,25 @@ function MetadataSection({ entity }: { entity: Entity }) {
   const fields: { label: string; value: string }[] = []
 
   if (entity.type === 'npc') {
-    const m = meta as NpcMetadata
+    const m = meta as unknown as NpcMetadata
     if (m.occupation) fields.push({ label: 'Occupation', value: m.occupation })
+    if (m.race) fields.push({ label: 'Race', value: m.race })
+    if (m.affiliation) fields.push({ label: 'Affiliation', value: m.affiliation })
     if (m.personality) fields.push({ label: 'Personality', value: m.personality })
   } else if (entity.type === 'location') {
-    const m = meta as LocationMetadata
+    const m = meta as unknown as LocationMetadata
     if (m.locationType) fields.push({ label: 'Type', value: m.locationType })
+    if (m.region) fields.push({ label: 'Region', value: m.region })
+    if (m.population) fields.push({ label: 'Population', value: m.population })
   } else if (entity.type === 'faction') {
-    const m = meta as FactionMetadata
+    const m = meta as unknown as FactionMetadata
+    if (m.alignment) fields.push({ label: 'Alignment', value: m.alignment })
+    if (m.headquarters) fields.push({ label: 'Headquarters', value: m.headquarters })
     if (m.goals) fields.push({ label: 'Goals', value: m.goals })
   } else if (entity.type === 'item') {
-    const m = meta as ItemMetadata
+    const m = meta as unknown as ItemMetadata
     if (m.itemType) fields.push({ label: 'Item Type', value: m.itemType })
+    if (m.rarity) fields.push({ label: 'Rarity', value: m.rarity })
   }
 
   if (fields.length === 0) return null

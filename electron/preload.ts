@@ -13,22 +13,24 @@ const api = {
   entities: {
     list: (campaignId: string, filters?: { type?: string; search?: string }) =>
       ipcRenderer.invoke('entities:list', campaignId, filters),
-    get: (id: string) => ipcRenderer.invoke('entities:get', id),
+    get: (id: string, campaignId: string) =>
+      ipcRenderer.invoke('entities:get', id, campaignId),
     create: (data: {
       campaignId: string
-      name: string
       type: string
+      name: string
       description?: string
       visibility?: string
-      metadata?: Record<string, unknown>
+      metadata: Record<string, unknown>
     }) => ipcRenderer.invoke('entities:create', data),
-    update: (id: string, data: {
+    update: (id: string, campaignId: string, data: {
       name?: string
       description?: string
       visibility?: string
       metadata?: Record<string, unknown>
-    }) => ipcRenderer.invoke('entities:update', id, data),
-    delete: (id: string) => ipcRenderer.invoke('entities:delete', id),
+    }) => ipcRenderer.invoke('entities:update', id, campaignId, data),
+    delete: (id: string, campaignId: string) =>
+      ipcRenderer.invoke('entities:delete', id, campaignId),
     counts: (campaignId: string) => ipcRenderer.invoke('entities:counts', campaignId),
   },
   relationships: {

@@ -1,103 +1,68 @@
 import { ipcMain } from 'electron'
-import { eq, and, like } from 'drizzle-orm'
-import { v4 as uuidv4 } from 'uuid'
-import { getDatabase } from '../../src/main/database/connection'
-import { entities } from '../schema'
-import type { EntityType } from '../schema'
+import {
+  createEntity,
+  getEntities,
+  getEntityById,
+  updateEntity,
+  deleteEntity,
+} from '../../src/main/entities/entityService'
+import type { EntityFilter } from '../../src/main/entities/entityService'
+import type { EntityType } from '../../src/main/entities/entityTypes'
 
 export function registerEntityHandlers() {
-  ipcMain.handle('entities:list', async (_event, campaignId: string, filters?: { type?: EntityType; search?: string }) => {
-    const db = getDatabase()
-    let query = db.select().from(entities).where(eq(entities.campaignId, campaignId))
+  ipcMain.handle('entities:list', (
+    _event,
+    campaignId: string,
+    filters?: EntityFilter,
+  ) => getEntities(campaignId, filters))
 
-    if (filters?.type) {
-      query = db.select().from(entities).where(
-        and(eq(entities.campaignId, campaignId), eq(entities.type, filters.type))
-      )
-    }
+  ipcMain.handle('entities:get', (
+    _event,
+    id: string,
+    campaignId: string,
+  ) => getEntityById(id, campaignId))
 
-    if (filters?.search) {
-      query = db.select().from(entities).where(
-        and(eq(entities.campaignId, campaignId), like(entities.name, `%${filters.search}%`))
-      )
-    }
+  ipcMain.handle('entities:create', (
+    _event,
+    data: {
+      campaignId: string
+      type: EntityType
+      name: string
+      description?: string
+      visibility?: 'private' | 'campaign' | 'players'
+      metadata: Record<string, unknown>
+    },
+  ) => createEntity(data as Parameters<typeof createEntity>[0]))
 
-    if (filters?.type && filters?.search) {
-      query = db.select().from(entities).where(
-        and(
-          eq(entities.campaignId, campaignId),
-          eq(entities.type, filters.type),
-          like(entities.name, `%${filters.search}%`)
-        )
-      )
-    }
+  ipcMain.handle('entities:update', (
+    _event,
+    id: string,
+    campaignId: string,
+    data: {
+      name?: string
+      description?: string
+      visibility?: 'private' | 'campaign' | 'players'
+      metadata?: Record<string, unknown>
+    },
+  ) => updateEntity(id, campaignId, data as Parameters<typeof updateEntity>[2]))
 
-    return query.orderBy(entities.updatedAt)
-  })
-
-  ipcMain.handle('entities:get', async (_event, id: string) => {
-    const db = getDatabase()
-    const result = await db.select().from(entities).where(eq(entities.id, id))
-    return result[0] ?? null
-  })
-
-  ipcMain.handle('entities:create', async (_event, data: {
-    campaignId: string
-    name: string
-    type: EntityType
-    description?: string
-    visibility?: 'public' | 'private'
-    metadata?: Record<string, unknown>
-  }) => {
-    const db = getDatabase()
-    const now = new Date().toISOString()
-    const entity = {
-      id: uuidv4(),
-      campaignId: data.campaignId,
-      name: data.name,
-      type: data.type,
-      visibility: data.visibility ?? 'public' as const,
-      description: data.description ?? '',
-      metadata: JSON.stringify(data.metadata ?? {}),
-      createdAt: now,
-      updatedAt: now,
-    }
-    await db.insert(entities).values(entity)
-    return { ...entity, metadata: data.metadata ?? {} }
-  })
-
-  ipcMain.handle('entities:update', async (_event, id: string, data: {
-    name?: string
-    description?: string
-    visibility?: 'public' | 'private'
-    metadata?: Record<string, unknown>
-  }) => {
-    const db = getDatabase()
-    const now = new Date().toISOString()
-    const updateData: Record<string, unknown> = { updatedAt: now }
-    if (data.name !== undefined) updateData.name = data.name
-    if (data.description !== undefined) updateData.description = data.description
-    if (data.visibility !== undefined) updateData.visibility = data.visibility
-    if (data.metadata !== undefined) updateData.metadata = JSON.stringify(data.metadata)
-
-    await db.update(entities).set(updateData).where(eq(entities.id, id))
-    const result = await db.select().from(entities).where(eq(entities.id, id))
-    if (!result[0]) return null
-    return { ...result[0], metadata: JSON.parse(result[0].metadata) }
-  })
-
-  ipcMain.handle('entities:delete', async (_event, id: string) => {
-    const db = getDatabase()
-    await db.delete(entities).where(eq(entities.id, id))
+  ipcMain.handle('entities:delete', async (
+    _event,
+    id: string,
+    campaignId: string,
+  ) => {
+    await deleteEntity(id, campaignId)
     return { success: true }
   })
 
-  ipcMain.handle('entities:counts', async (_event, campaignId: string) => {
-    const db = getDatabase()
-    const all = await db.select().from(entities).where(eq(entities.campaignId, campaignId))
-    const counts = { npc: 0, location: 0, faction: 0, item: 0, total: all.length }
-    for (const e of all) {
-      counts[e.type as EntityType]++
+  ipcMain.handle('entities:counts', async (
+    _event,
+    campaignId: string,
+  ) => {
+    const list = await getEntities(campaignId)
+    const counts = { npc: 0, location: 0, faction: 0, item: 0, total: list.length }
+    for (const e of list) {
+      counts[e.type]++
     }
     return counts
   })

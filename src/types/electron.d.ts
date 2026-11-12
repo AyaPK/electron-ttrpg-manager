@@ -114,22 +114,22 @@ declare global {
       }
       entities: {
         list: (campaignId: string, filters?: { type?: EntityType; search?: string }) => Promise<Entity[]>
-        get: (id: string) => Promise<Entity | null>
+        get: (id: string, campaignId: string) => Promise<Entity | null>
         create: (data: {
           campaignId: string
-          name: string
           type: EntityType
+          name: string
           description?: string
           visibility?: Visibility
-          metadata?: EntityMetadata
+          metadata: Record<string, unknown>
         }) => Promise<Entity>
-        update: (id: string, data: {
+        update: (id: string, campaignId: string, data: {
           name?: string
           description?: string
           visibility?: Visibility
-          metadata?: EntityMetadata
-        }) => Promise<Entity | null>
-        delete: (id: string) => Promise<{ success: boolean }>
+          metadata?: Record<string, unknown>
+        }) => Promise<Entity>
+        delete: (id: string, campaignId: string) => Promise<{ success: boolean }>
         counts: (campaignId: string) => Promise<EntityCounts>
       }
       relationships: {
