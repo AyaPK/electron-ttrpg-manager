@@ -80,14 +80,19 @@ export interface Entity {
 // CRUD input schemas
 // ---------------------------------------------------------------------------
 
-export const CreateEntitySchema = z.object({
-  campaignId: z.string().min(1),
-  type: EntityTypeSchema,
-  name: z.string().min(1),
-  description: z.string().optional(),
-  visibility: VisibilitySchema.default('campaign'),
-  metadata: EntityMetadataSchema,
-})
+export const CreateEntitySchema = z
+  .object({
+    campaignId: z.string().min(1),
+    type: EntityTypeSchema,
+    name: z.string().min(1),
+    description: z.string().optional(),
+    visibility: VisibilitySchema.default('campaign'),
+    metadata: EntityMetadataSchema,
+  })
+  .refine((v) => v.metadata.type === v.type, {
+    message: 'metadata.type must match entity type',
+    path: ['metadata', 'type'],
+  })
 
 export const UpdateEntitySchema = z.object({
   name: z.string().min(1).optional(),
