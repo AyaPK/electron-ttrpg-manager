@@ -15,6 +15,13 @@
       "when": 1794416091254,
       "tag": "0001_glorious_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794479557149,
+      "tag": "0002_empty_next_avengers",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
 
 export const workspaces = sqliteTable('workspaces', {
   id: text('id').primaryKey(),
@@ -24,3 +24,27 @@ export const campaigns = sqliteTable('campaigns', {
 
 export type Campaign = typeof campaigns.$inferSelect
 export type NewCampaign = typeof campaigns.$inferInsert
+
+export const entities = sqliteTable(
+  'entities',
+  {
+    id: text('id').primaryKey(),
+    campaignId: text('campaign_id')
+      .notNull()
+      .references(() => campaigns.id),
+    type: text('type').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    visibility: text('visibility').notNull().default('campaign'),
+    metadata: text('metadata').notNull().default('{}'),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [
+    index('entities_campaign_id_idx').on(t.campaignId),
+    index('entities_type_idx').on(t.type),
+  ],
+)
+
+export type DbEntity = typeof entities.$inferSelect
+export type NewDbEntity = typeof entities.$inferInsert

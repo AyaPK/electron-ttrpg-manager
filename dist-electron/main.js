@@ -1730,6 +1730,54 @@ function sqliteTableBase(name, columns, extraConfig, schema, baseName = name) {
 var sqliteTable = (name, columns, extraConfig) => {
 	return sqliteTableBase(name, columns, extraConfig);
 };
+// node_modules/drizzle-orm/sqlite-core/indexes.js
+var IndexBuilderOn = class {
+	constructor(name, unique) {
+		this.name = name;
+		this.unique = unique;
+	}
+	static [entityKind] = "SQLiteIndexBuilderOn";
+	on(...columns) {
+		return new IndexBuilder(this.name, columns, this.unique);
+	}
+};
+var IndexBuilder = class {
+	static [entityKind] = "SQLiteIndexBuilder";
+	/** @internal */
+	config;
+	constructor(name, columns, unique) {
+		this.config = {
+			name,
+			columns,
+			unique,
+			where: void 0
+		};
+	}
+	/**
+	* Condition for partial index.
+	*/
+	where(condition) {
+		this.config.where = condition;
+		return this;
+	}
+	/** @internal */
+	build(table) {
+		return new Index(this.config, table);
+	}
+};
+var Index = class {
+	static [entityKind] = "SQLiteIndex";
+	config;
+	constructor(config, table) {
+		this.config = {
+			...config,
+			table
+		};
+	}
+};
+function index(name) {
+	return new IndexBuilderOn(name, false);
+}
 // node_modules/drizzle-orm/sqlite-core/utils.js
 function extractUsedTable(table) {
 	if (is(table, SQLiteTable)) return [`${table[Table.Symbol.BaseName]}`];
@@ -4135,6 +4183,17 @@ var campaigns$1 = sqliteTable("campaigns", {
 	createdAt: integer("created_at").notNull(),
 	updatedAt: integer("updated_at").notNull()
 });
+sqliteTable("entities", {
+	id: text("id").primaryKey(),
+	campaignId: text("campaign_id").notNull().references(() => campaigns$1.id),
+	type: text("type").notNull(),
+	name: text("name").notNull(),
+	description: text("description"),
+	visibility: text("visibility").notNull().default("campaign"),
+	metadata: text("metadata").notNull().default("{}"),
+	createdAt: integer("created_at").notNull(),
+	updatedAt: integer("updated_at").notNull()
+}, (t) => [index("entities_campaign_id_idx").on(t.campaignId), index("entities_type_idx").on(t.type)]);
 // src/main/workspaces/workspaceService.ts
 var activeWorkspace = null;
 async function initialiseWorkspace() {
