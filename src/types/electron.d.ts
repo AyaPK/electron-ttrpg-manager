@@ -9,23 +9,35 @@ export interface Campaign {
 }
 
 export type EntityType = 'npc' | 'location' | 'faction' | 'item'
-export type Visibility = 'public' | 'private'
+export type Visibility = 'private' | 'campaign' | 'players'
 
 export interface NpcMetadata {
+  type: 'npc'
   occupation?: string
   personality?: string
+  race?: string
+  affiliation?: string
 }
 
 export interface LocationMetadata {
+  type: 'location'
   locationType?: string
+  region?: string
+  population?: string
 }
 
 export interface FactionMetadata {
+  type: 'faction'
   goals?: string
+  alignment?: string
+  headquarters?: string
 }
 
 export interface ItemMetadata {
+  type: 'item'
   itemType?: string
+  rarity?: string
+  attunement?: boolean
 }
 
 export type EntityMetadata = NpcMetadata | LocationMetadata | FactionMetadata | ItemMetadata
@@ -33,13 +45,13 @@ export type EntityMetadata = NpcMetadata | LocationMetadata | FactionMetadata | 
 export interface Entity {
   id: string
   campaignId: string
-  name: string
   type: EntityType
+  name: string
+  description: string | null
   visibility: Visibility
-  description: string
-  metadata: EntityMetadata
-  createdAt: string
-  updatedAt: string
+  metadata: Record<string, unknown>
+  createdAt: number
+  updatedAt: number
 }
 
 export interface Relationship {
@@ -48,8 +60,8 @@ export interface Relationship {
   sourceEntityId: string
   targetEntityId: string
   relationshipType: string
-  description: string
-  createdAt: string
+  description: string | null
+  createdAt: number
   sourceEntity?: Entity | null
   targetEntity?: Entity | null
 }
