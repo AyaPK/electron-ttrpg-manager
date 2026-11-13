@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, Edit2, Trash2 } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
-import type { Entity, NpcMetadata, LocationMetadata, FactionMetadata, ItemMetadata, MonsterMetadata, PlayerMetadata } from '../types/electron.d'
+import type { Entity, NpcMetadata, LocationMetadata, FactionMetadata, ItemMetadata, MonsterMetadata, PlayerMetadata, SpellMetadata } from '../types/electron.d'
+import { crToXp } from '../utils/crUtils'
 import { EntityTypeBadge } from './ui/EntityTypeBadge'
 import { RichTextEditor } from './ui/RichTextEditor'
 import { Button } from './ui/Button'
@@ -165,16 +166,15 @@ function MetadataSection({ entity }: { entity: Entity }) {
     if (m.itemType) fields.push({ label: 'Item Type', value: m.itemType })
     if (m.rarity) fields.push({ label: 'Rarity', value: m.rarity })
   } else if (entity.type === 'monster') {
-    const m = meta as unknown as MonsterMetadata
-    if (m.monsterType) fields.push({ label: 'Type', value: m.monsterType })
-    if (m.challengeRating) fields.push({ label: 'CR', value: m.challengeRating })
-    if (m.habitat) fields.push({ label: 'Habitat', value: m.habitat })
+    return <MonsterStatBlock entity={entity} />
   } else if (entity.type === 'player') {
     const m = meta as unknown as PlayerMetadata
     if (m.playerClass) fields.push({ label: 'Class', value: m.playerClass })
     if (m.race) fields.push({ label: 'Race', value: m.race })
     if (m.level) fields.push({ label: 'Level', value: m.level })
     if (m.player) fields.push({ label: 'Player', value: m.player })
+  } else if (entity.type === 'spell') {
+    return <SpellStatBlock entity={entity} />
   }
 
   if (fields.length === 0) return null
@@ -187,6 +187,215 @@ function MetadataSection({ entity }: { entity: Entity }) {
           <span style={{ fontSize: 14, color: 'var(--text-primary)', marginTop: 4 }}>{value}</span>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Monster stat block helpers
+// ---------------------------------------------------------------------------
+
+function modifier(score: number): string {
+  const mod = Math.floor((score - 10) / 2)
+  return mod >= 0 ? `+${mod}` : `${mod}`
+}
+
+function ActionBlock({ title, actions }: { title: string; actions: { name: string; desc: string; attack_bonus?: number; damage_dice?: string; damage_bonus?: number }[] }) {
+  if (!actions?.length) return null
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={statBlockDivider} />
+      <h4 style={statBlockSectionTitle}>{title}</h4>
+      {actions.map((a, i) => (
+        <p key={i} style={{ margin: '0 0 8px', fontSize: 13, lineHeight: 1.55, color: 'var(--text-secondary)' }}>
+          <strong style={{ color: 'var(--text-primary)' }}>{a.name}.</strong>{' '}
+          {a.desc}
+        </p>
+      ))}
+    </div>
+  )
+}
+
+function MonsterStatBlock({ entity }: { entity: Entity }) {
+  const m = entity.metadata as unknown as MonsterMetadata
+  const ABILITIES = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'] as const
+  const ABILITY_SHORT = ['STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA']
+  const xp = m.challengeRating ? crToXp(m.challengeRating) : null
+
+  return (
+    <div style={statBlockWrap}>
+      {/* Type line */}
+      {(m.size || m.monsterType) && (
+        <p style={{ margin: '0 0 12px', fontSize: 13, fontStyle: 'italic', color: 'var(--text-muted)' }}>
+          {[m.size, m.monsterType, m.subtype ? `(${m.subtype})` : null, m.alignment].filter(Boolean).join(' ')}
+        </p>
+      )}
+
+      <div style={statBlockDivider} />
+
+      {/* Combat basics */}
+      <div style={{ marginBottom: 10 }}>
+        {m.armorClass != null && (
+          <p style={statLine}><strong>Armour Class</strong> {m.armorClass}</p>
+        )}
+        {m.hitPoints != null && (
+          <p style={statLine}><strong>Hit Points</strong> {m.hitPoints}{m.hitDice ? ` (${m.hitDice})` : ''}</p>
+        )}
+        {m.speed && (
+          <p style={statLine}><strong>Speed</strong> {m.speed}</p>
+        )}
+      </div>
+
+      {/* Ability scores */}
+      {ABILITIES.some((ab) => m[ab] != null) && (
+        <>
+          <div style={statBlockDivider} />
+          <div style={abilityGrid}>
+            {ABILITIES.map((ab, i) => {
+              const score = m[ab]
+              return (
+                <div key={ab} style={abilityCell}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.07em' }}>{ABILITY_SHORT[i]}</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>{score ?? '—'}</span>
+                  {score != null && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{modifier(score)}</span>}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Traits */}
+      {(m.senses || m.languages || m.damageResistances || m.damageImmunities || m.damageVulnerabilities || m.conditionImmunities || m.challengeRating) && (
+        <>
+          <div style={statBlockDivider} />
+          <div style={{ marginBottom: 10 }}>
+            {m.damageVulnerabilities && <p style={statLine}><strong>Damage Vulnerabilities</strong> {m.damageVulnerabilities}</p>}
+            {m.damageResistances && <p style={statLine}><strong>Damage Resistances</strong> {m.damageResistances}</p>}
+            {m.damageImmunities && <p style={statLine}><strong>Damage Immunities</strong> {m.damageImmunities}</p>}
+            {m.conditionImmunities && <p style={statLine}><strong>Condition Immunities</strong> {m.conditionImmunities}</p>}
+            {m.senses && <p style={statLine}><strong>Senses</strong> {m.senses}</p>}
+            {m.languages && <p style={statLine}><strong>Languages</strong> {m.languages}</p>}
+            {m.challengeRating && (
+              <p style={statLine}>
+                <strong>Challenge</strong> {m.challengeRating}
+                {xp != null && <span style={{ color: 'var(--text-muted)', fontSize: 12 }}> ({xp.toLocaleString()} XP)</span>}
+              </p>
+            )}
+          </div>
+        </>
+      )}
+
+      <ActionBlock title="Special Abilities" actions={m.specialAbilities ?? []} />
+      <ActionBlock title="Actions" actions={m.actions ?? []} />
+      <ActionBlock title="Reactions" actions={m.reactions ?? []} />
+      <ActionBlock title="Legendary Actions" actions={m.legendaryActions ?? []} />
+    </div>
+  )
+}
+
+const statBlockWrap: React.CSSProperties = {
+  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border)',
+  borderRadius: 10,
+  padding: '18px 20px',
+  marginBottom: 8,
+}
+
+const statBlockDivider: React.CSSProperties = {
+  height: 1,
+  background: 'var(--border)',
+  margin: '10px 0',
+}
+
+const statBlockSectionTitle: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 700,
+  color: '#f87171',
+  margin: '0 0 8px',
+  fontStyle: 'italic',
+}
+
+const statLine: React.CSSProperties = {
+  margin: '3px 0',
+  fontSize: 13,
+  color: 'var(--text-secondary)',
+  lineHeight: 1.5,
+}
+
+const abilityGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(6, 1fr)',
+  gap: 6,
+  margin: '10px 0',
+}
+
+const abilityCell: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  background: 'var(--bg-secondary)',
+  borderRadius: 6,
+  padding: '8px 4px',
+  gap: 2,
+}
+
+function SpellStatBlock({ entity }: { entity: Entity }) {
+  const m = entity.metadata as unknown as SpellMetadata
+
+  const pills = [
+    m.level,
+    m.school,
+    m.concentration === 'yes' ? 'Concentration' : null,
+    m.ritual === 'yes' ? 'Ritual' : null,
+  ].filter(Boolean) as string[]
+
+  const rows: { label: string; value: string }[] = [
+    m.castingTime ? { label: 'Casting Time', value: m.castingTime } : null,
+    m.range       ? { label: 'Range',         value: m.range }       : null,
+    m.components  ? { label: 'Components',    value: m.components }  : null,
+    m.duration    ? { label: 'Duration',       value: m.duration }   : null,
+    m.spellClass  ? { label: 'Classes',        value: m.spellClass } : null,
+    m.page        ? { label: 'Source',         value: m.page }       : null,
+  ].filter(Boolean) as { label: string; value: string }[]
+
+  return (
+    <div style={statBlockWrap}>
+      {/* Pill tags */}
+      {pills.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          {pills.map((p) => (
+            <span key={p} style={{
+              fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 20,
+              background: 'var(--spell-color)18', color: 'var(--spell-color)',
+              border: '1px solid var(--spell-color)30',
+            }}>{p}</span>
+          ))}
+        </div>
+      )}
+
+      {rows.length > 0 && (
+        <>
+          <div style={statBlockDivider} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
+            {rows.map(({ label, value }) => (
+              <p key={label} style={statLine}>
+                <strong style={{ color: 'var(--text-primary)' }}>{label}</strong> {value}
+              </p>
+            ))}
+          </div>
+        </>
+      )}
+
+      {m.higherLevel && (
+        <>
+          <div style={statBlockDivider} />
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.55 }}>
+            <strong style={{ color: 'var(--text-primary)', fontStyle: 'italic' }}>At Higher Levels.</strong>{' '}
+            <span dangerouslySetInnerHTML={{ __html: m.higherLevel }} />
+          </p>
+        </>
+      )}
     </div>
   )
 }

@@ -60,7 +60,7 @@ export function registerEntityHandlers() {
     campaignId: string,
   ) => {
     const list = await getEntities(campaignId)
-    const counts = { npc: 0, location: 0, faction: 0, item: 0, monster: 0, player: 0, total: list.length }
+    const counts = { npc: 0, location: 0, faction: 0, item: 0, monster: 0, player: 0, spell: 0, total: list.length }
     for (const e of list) {
       counts[e.type]++
     }

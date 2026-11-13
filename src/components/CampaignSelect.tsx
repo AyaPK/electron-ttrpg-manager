@@ -103,9 +103,9 @@ export function CampaignSelect() {
           </div>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
-              Campaign Manager
+              World Weaver
             </h1>
-            <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>Your worlds, your stories.</p>
+            <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: 13 }}>Every story has a thousand threads</p>
           </div>
         </div>
         <Button onClick={openCreate} icon={<Plus size={15} />}>New Campaign</Button>

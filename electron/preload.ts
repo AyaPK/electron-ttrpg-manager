@@ -6,9 +6,12 @@ const api = {
     get: (id: string) => ipcRenderer.invoke('campaigns:get', id),
     create: (data: { name: string; description: string; system: string }) =>
       ipcRenderer.invoke('campaigns:create', data),
-    update: (id: string, data: { name?: string; description?: string; system?: string }) =>
+    update: (id: string, data: { name?: string; description?: string; system?: string; backgroundImage?: string | null }) =>
       ipcRenderer.invoke('campaigns:update', id, data),
+    pickImage: () => ipcRenderer.invoke('campaigns:pickImage'),
     delete: (id: string) => ipcRenderer.invoke('campaigns:delete', id),
+    seedMonsters: (campaignId: string) => ipcRenderer.invoke('campaigns:seedMonsters', campaignId),
+    seedSpells: (campaignId: string) => ipcRenderer.invoke('campaigns:seedSpells', campaignId),
   },
   entities: {
     list: (campaignId: string, filters?: { type?: string; search?: string }) =>

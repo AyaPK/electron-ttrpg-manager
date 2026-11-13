@@ -2,6 +2,7 @@ import { useAppStore } from './store/useAppStore'
 import { AppSidebar } from './components/AppSidebar'
 import { Sidebar } from './components/Sidebar'
 import { CampaignSelect } from './components/CampaignSelect'
+import { CampaignDashboard } from './components/CampaignDashboard'
 import { CampaignHub } from './components/CampaignHub'
 import { EncounterCreator } from './components/EncounterCreator'
 import { EntityList } from './components/EntityList'
@@ -14,7 +15,8 @@ function App() {
   const renderMain = () => {
     switch (view) {
       case 'campaign-select': return <CampaignSelect />
-      case 'campaign-overview': return <CampaignHub />
+      case 'campaign-overview': return <CampaignDashboard />
+      case 'world-bible': return <CampaignHub />
       case 'encounters': return <EncounterCreator />
       case 'entity-list': return <EntityList />
       case 'entity-detail': return <EntityDetail />

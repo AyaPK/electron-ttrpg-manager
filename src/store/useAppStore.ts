@@ -7,7 +7,7 @@ interface AppState {
   activeCampaignId: string | null
   activeCampaign: Campaign | null
   selectedEntityId: string | null
-  view: 'campaign-select' | 'campaign-overview' | 'entity-list' | 'entity-detail' | 'settings' | 'encounters'
+  view: 'campaign-select' | 'campaign-overview' | 'world-bible' | 'entity-list' | 'entity-detail' | 'settings' | 'encounters'
   appSection: AppSection | null
   entityTypeFilter: EntityType | null
   searchQuery: string
@@ -73,7 +73,7 @@ export const useAppStore = create<AppState>((set) => ({
     set({ view: 'campaign-overview', appSection: null, selectedEntityId: null }),
 
   navigateToWorldBible: () =>
-    set({ view: 'campaign-overview', appSection: 'world-bible', selectedEntityId: null }),
+    set({ view: 'world-bible', appSection: 'world-bible', selectedEntityId: null }),
 
   navigateToEncounters: () =>
     set({ view: 'encounters', appSection: 'encounters', selectedEntityId: null }),

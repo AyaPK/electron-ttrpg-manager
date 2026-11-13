@@ -18,6 +18,7 @@ export const campaigns = sqliteTable('campaigns', {
   name: text('name').notNull(),
   description: text('description'),
   system: text('system'),
+  backgroundImage: text('background_image'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 })

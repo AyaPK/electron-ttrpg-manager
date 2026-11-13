@@ -4,11 +4,12 @@ export interface Campaign {
   name: string
   description: string | null
   system: string | null
+  backgroundImage: string | null
   createdAt: number
   updatedAt: number
 }
 
-export type EntityType = 'npc' | 'location' | 'faction' | 'item' | 'monster' | 'player'
+export type EntityType = 'npc' | 'location' | 'faction' | 'item' | 'monster' | 'player' | 'spell'
 export type Visibility = 'private' | 'campaign' | 'players'
 
 export interface NpcMetadata {
@@ -40,11 +41,42 @@ export interface ItemMetadata {
   attunement?: boolean
 }
 
+export interface MonsterAction {
+  name: string
+  desc: string
+  attack_bonus?: number
+  damage_dice?: string
+  damage_bonus?: number
+}
+
 export interface MonsterMetadata {
   type: 'monster'
   monsterType?: string
   challengeRating?: string
   habitat?: string
+  size?: string
+  subtype?: string
+  alignment?: string
+  armorClass?: number
+  hitPoints?: number
+  hitDice?: string
+  speed?: string
+  strength?: number
+  dexterity?: number
+  constitution?: number
+  intelligence?: number
+  wisdom?: number
+  charisma?: number
+  senses?: string
+  languages?: string
+  damageVulnerabilities?: string
+  damageResistances?: string
+  damageImmunities?: string
+  conditionImmunities?: string
+  specialAbilities?: MonsterAction[]
+  actions?: MonsterAction[]
+  legendaryActions?: MonsterAction[]
+  reactions?: MonsterAction[]
 }
 
 export interface PlayerMetadata {
@@ -53,6 +85,21 @@ export interface PlayerMetadata {
   race?: string
   level?: string
   player?: string
+}
+
+export interface SpellMetadata {
+  type: 'spell'
+  level?: string
+  school?: string
+  castingTime?: string
+  range?: string
+  components?: string
+  duration?: string
+  concentration?: string
+  ritual?: string
+  spellClass?: string
+  higherLevel?: string
+  page?: string
 }
 
 export type EntityMetadata = NpcMetadata | LocationMetadata | FactionMetadata | ItemMetadata | MonsterMetadata | PlayerMetadata
@@ -88,6 +135,7 @@ export interface EntityCounts {
   item: number
   monster: number
   player: number
+  spell: number
   total: number
 }
 
@@ -159,8 +207,11 @@ declare global {
         list: () => Promise<Campaign[]>
         get: (id: string) => Promise<Campaign | null>
         create: (data: { name: string; description?: string; system?: string }) => Promise<Campaign>
-        update: (id: string, data: { name?: string; description?: string; system?: string }) => Promise<Campaign>
+        update: (id: string, data: { name?: string; description?: string; system?: string; backgroundImage?: string | null }) => Promise<Campaign>
+        pickImage: () => Promise<string | null>
         delete: (id: string) => Promise<{ success: boolean }>
+        seedMonsters: (campaignId: string) => Promise<{ seeded: number }>
+        seedSpells: (campaignId: string) => Promise<{ seeded: number }>
       }
       entities: {
         list: (campaignId: string, filters?: { type?: EntityType; search?: string }) => Promise<Entity[]>

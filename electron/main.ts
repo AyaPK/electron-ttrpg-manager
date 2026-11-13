@@ -1,5 +1,6 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, shell, protocol, net } from 'electron'
 import path from 'path'
+import { pathToFileURL } from 'url'
 import { initialiseDatabase, closeDatabase } from '../src/main/database/connection'
 import { initialiseWorkspace } from '../src/main/workspaces/workspaceService'
 import { registerCampaignHandlers } from './handlers/campaigns'
@@ -15,6 +16,24 @@ process.env.VITE_PUBLIC = app.isPackaged
 
 let win: BrowserWindow | null = null
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
+
+// Serves user-chosen local images to the renderer, which can't load file:// URLs from the dev server origin.
+const MEDIA_SCHEME = 'campaign-media'
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif|bmp)$/i
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } },
+])
+
+function registerMediaProtocol() {
+  protocol.handle(MEDIA_SCHEME, (request) => {
+    const filePath = decodeURIComponent(new URL(request.url).pathname.slice(1))
+    if (!IMAGE_EXTENSIONS.test(filePath)) {
+      return new Response(null, { status: 403 })
+    }
+    return net.fetch(pathToFileURL(filePath).toString())
+  })
+}
 
 function createWindow() {
   win = new BrowserWindow({
@@ -64,6 +83,7 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(async () => {
+  registerMediaProtocol()
   initialiseDatabase()
   await initialiseWorkspace()
   registerCampaignHandlers()

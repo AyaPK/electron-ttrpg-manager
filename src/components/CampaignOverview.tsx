@@ -15,7 +15,7 @@ const STAT_CARDS: { type: EntityType; label: string; icon: React.ReactNode; colo
 
 export function CampaignOverview() {
   const { activeCampaign, setActiveCampaign, navigateToEntityList } = useAppStore()
-  const [counts, setCounts] = useState<EntityCounts>({ npc: 0, location: 0, faction: 0, item: 0, monster: 0, player: 0, total: 0 })
+  const [counts, setCounts] = useState<EntityCounts>({ npc: 0, location: 0, faction: 0, item: 0, monster: 0, player: 0, spell: 0, total: 0 })
   const [showEdit, setShowEdit] = useState(false)
   const [form, setForm] = useState({ name: '', description: '', system: '' })
   const [saving, setSaving] = useState(false)

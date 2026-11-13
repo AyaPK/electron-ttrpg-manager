@@ -24,7 +24,7 @@ export function Modal({ title, onClose, children, width = 480 }: ModalProps) {
             <X size={16} />
           </button>
         </div>
-        <div style={{ padding: '20px 24px 24px' }}>
+        <div style={{ padding: '20px 24px 24px', overflowY: 'auto', flex: 1 }}>
           {children}
         </div>
       </div>
@@ -48,7 +48,10 @@ const modalStyle: React.CSSProperties = {
   border: '1px solid var(--border-light)',
   borderRadius: 12,
   width: '90%',
+  maxHeight: '90vh',
   boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+  display: 'flex',
+  flexDirection: 'column',
   overflow: 'hidden',
 }
 

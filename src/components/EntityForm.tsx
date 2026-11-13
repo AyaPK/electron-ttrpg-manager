@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { EntityType, NpcMetadata, LocationMetadata, FactionMetadata, ItemMetadata, MonsterMetadata, PlayerMetadata } from '../types/electron.d'
+import type { EntityType, NpcMetadata, LocationMetadata, FactionMetadata, ItemMetadata, MonsterMetadata, PlayerMetadata, SpellMetadata } from '../types/electron.d'
 import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { RichTextEditor } from './ui/RichTextEditor'
@@ -22,6 +22,7 @@ interface EntityFormProps {
 const TYPES: { value: EntityType; label: string }[] = [
   { value: 'npc', label: 'NPC' },
   { value: 'monster', label: 'Monster' },
+  { value: 'spell', label: 'Spell' },
   { value: 'location', label: 'Location' },
   { value: 'player', label: 'Player' },
   { value: 'faction', label: 'Faction' },
@@ -94,7 +95,7 @@ export function EntityForm({ campaignId, defaultType = 'npc', onSaved, onCancel,
         <RichTextEditor content={description} onChange={setDescription} placeholder="Describe this entity..." />
       </div>
 
-      <MetadataFields type={type} metadata={metadata} setMeta={setMeta} />
+      <MetadataFields type={type} metadata={metadata} setMeta={setMeta} setMetadata={setMetadata} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <label style={labelStyle}>Visibility</label>
@@ -130,7 +131,42 @@ export function EntityForm({ campaignId, defaultType = 'npc', onSaved, onCancel,
   )
 }
 
-function MetadataFields({ type, metadata, setMeta }: { type: EntityType; metadata: Record<string, unknown>; setMeta: (k: string, v: string) => void }) {
+const twoCol: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gap: 10,
+}
+
+const sixCol: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(6, 1fr)',
+  gap: 8,
+}
+
+const metaSectionHead: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 600,
+  color: 'var(--text-muted)',
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.07em',
+  borderBottom: '1px solid var(--border)',
+  paddingBottom: 6,
+  marginBottom: -4,
+}
+
+const numInput: React.CSSProperties = {
+  width: '100%',
+  padding: '7px 8px',
+  background: 'var(--bg-tertiary)',
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  color: 'var(--text-primary)',
+  fontSize: 14,
+  textAlign: 'center' as const,
+  boxSizing: 'border-box' as const,
+}
+
+function MetadataFields({ type, metadata, setMeta, setMetadata }: { type: EntityType; metadata: Record<string, unknown>; setMeta: (k: string, v: string) => void; setMetadata: React.Dispatch<React.SetStateAction<Record<string, unknown>>> }) {
   const str = (k: string) => ((metadata as Record<string, string>)[k]) ?? ''
 
   if (type === 'npc') {
@@ -185,12 +221,69 @@ function MetadataFields({ type, metadata, setMeta }: { type: EntityType; metadat
 
   if (type === 'monster') {
     const m = metadata as unknown as MonsterMetadata
+    const num = (k: string) => ((metadata as Record<string, number>)[k])?.toString() ?? ''
+    const setNum = (k: string, v: string) => {
+      const n = parseInt(v, 10)
+      if (!isNaN(n)) setMetadata((prev) => ({ ...prev, [k]: n }))
+      else if (v === '') setMetadata((prev) => { const next = { ...prev }; delete next[k]; return next })
+    }
     return (
-      <>
-        <Input label="Monster Type" value={m.monsterType ?? ''} onChange={(v) => setMeta('monsterType', v)} placeholder="Beast, undead, dragon, humanoid..." />
-        <Input label="Challenge Rating" value={m.challengeRating ?? ''} onChange={(v) => setMeta('challengeRating', v)} placeholder="1/4, 1, 5, 20..." />
-        <Input label="Habitat" value={m.habitat ?? ''} onChange={(v) => setMeta('habitat', v)} placeholder="Forest, dungeon, arctic..." />
-      </>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Core identity */}
+        <div style={metaSectionHead}>Identity</div>
+        <div style={twoCol}>
+          <Input label="Monster Type" value={m.monsterType ?? ''} onChange={(v) => setMeta('monsterType', v)} placeholder="humanoid, beast, undead..." />
+          <Input label="Subtype" value={m.subtype ?? ''} onChange={(v) => setMeta('subtype', v)} placeholder="goblinoid, shapechanger..." />
+        </div>
+        <div style={twoCol}>
+          <Input label="Size" value={m.size ?? ''} onChange={(v) => setMeta('size', v)} placeholder="Tiny, Small, Medium, Large..." />
+          <Input label="Alignment" value={m.alignment ?? ''} onChange={(v) => setMeta('alignment', v)} placeholder="neutral evil..." />
+        </div>
+        <div style={twoCol}>
+          <Input label="Challenge Rating" value={m.challengeRating ?? ''} onChange={(v) => setMeta('challengeRating', v)} placeholder="1/4, 1, 5, 20..." />
+          <Input label="Habitat" value={m.habitat ?? ''} onChange={(v) => setMeta('habitat', v)} placeholder="Forest, dungeon, arctic..." />
+        </div>
+
+        {/* Combat stats */}
+        <div style={metaSectionHead}>Combat</div>
+        <div style={twoCol}>
+          <Input label="Armour Class" value={num('armorClass')} onChange={(v) => setNum('armorClass', v)} placeholder="15" />
+          <Input label="Hit Points" value={num('hitPoints')} onChange={(v) => setNum('hitPoints', v)} placeholder="45" />
+        </div>
+        <div style={twoCol}>
+          <Input label="Hit Dice" value={m.hitDice ?? ''} onChange={(v) => setMeta('hitDice', v)} placeholder="6d8+12" />
+          <Input label="Speed" value={m.speed ?? ''} onChange={(v) => setMeta('speed', v)} placeholder="30 ft., fly 60 ft." />
+        </div>
+
+        {/* Ability scores */}
+        <div style={metaSectionHead}>Ability Scores</div>
+        <div style={sixCol}>
+          {(['strength','dexterity','constitution','intelligence','wisdom','charisma'] as const).map((ab) => (
+            <div key={ab} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{ab.slice(0,3).toUpperCase()}</label>
+              <input
+                type="number" min={1} max={30}
+                value={num(ab)}
+                onChange={(e) => setNum(ab, e.target.value)}
+                style={numInput}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Senses & Languages */}
+        <div style={metaSectionHead}>Traits</div>
+        <Input label="Senses" value={m.senses ?? ''} onChange={(v) => setMeta('senses', v)} placeholder="darkvision 60 ft., passive Perception 9" />
+        <Input label="Languages" value={m.languages ?? ''} onChange={(v) => setMeta('languages', v)} placeholder="Common, Goblin" />
+        <div style={twoCol}>
+          <Input label="Damage Resistances" value={m.damageResistances ?? ''} onChange={(v) => setMeta('damageResistances', v)} placeholder="bludgeoning, fire" />
+          <Input label="Damage Immunities" value={m.damageImmunities ?? ''} onChange={(v) => setMeta('damageImmunities', v)} placeholder="poison, psychic" />
+        </div>
+        <div style={twoCol}>
+          <Input label="Damage Vulnerabilities" value={m.damageVulnerabilities ?? ''} onChange={(v) => setMeta('damageVulnerabilities', v)} placeholder="" />
+          <Input label="Condition Immunities" value={m.conditionImmunities ?? ''} onChange={(v) => setMeta('conditionImmunities', v)} placeholder="poisoned, frightened" />
+        </div>
+      </div>
     )
   }
 
@@ -203,6 +296,34 @@ function MetadataFields({ type, metadata, setMeta }: { type: EntityType; metadat
         <Input label="Level" value={m.level ?? ''} onChange={(v) => setMeta('level', v)} placeholder="1-20" />
         <Input label="Player Name" value={m.player ?? ''} onChange={(v) => setMeta('player', v)} placeholder="Real-world player's name..." />
       </>
+    )
+  }
+
+  if (type === 'spell') {
+    const m = metadata as unknown as SpellMetadata
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={metaSectionHead}>Identity</div>
+        <div style={twoCol}>
+          <Input label="Level" value={m.level ?? ''} onChange={(v) => setMeta('level', v)} placeholder="1st-level, Cantrip..." />
+          <Input label="School" value={m.school ?? ''} onChange={(v) => setMeta('school', v)} placeholder="Evocation, Illusion..." />
+        </div>
+        <Input label="Class" value={m.spellClass ?? ''} onChange={(v) => setMeta('spellClass', v)} placeholder="Wizard, Sorcerer, Cleric..." />
+        <div style={metaSectionHead}>Casting</div>
+        <div style={twoCol}>
+          <Input label="Casting Time" value={m.castingTime ?? ''} onChange={(v) => setMeta('castingTime', v)} placeholder="1 action, 1 bonus action..." />
+          <Input label="Range" value={m.range ?? ''} onChange={(v) => setMeta('range', v)} placeholder="120 feet, Self, Touch..." />
+        </div>
+        <div style={twoCol}>
+          <Input label="Duration" value={m.duration ?? ''} onChange={(v) => setMeta('duration', v)} placeholder="Instantaneous, 1 hour..." />
+          <Input label="Components" value={m.components ?? ''} onChange={(v) => setMeta('components', v)} placeholder="V, S, M..." />
+        </div>
+        <div style={twoCol}>
+          <Input label="Concentration" value={m.concentration ?? ''} onChange={(v) => setMeta('concentration', v)} placeholder="yes / no" />
+          <Input label="Ritual" value={m.ritual ?? ''} onChange={(v) => setMeta('ritual', v)} placeholder="yes / no" />
+        </div>
+        <Input label="Source Page" value={m.page ?? ''} onChange={(v) => setMeta('page', v)} placeholder="phb 257" />
+      </div>
     )
   }
 

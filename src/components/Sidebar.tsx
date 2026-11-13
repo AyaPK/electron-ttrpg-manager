@@ -20,7 +20,7 @@ export function Sidebar() {
     entityTypeFilter,
     sidebarOpen,
     toggleSidebar,
-    navigateToCampaignOverview,
+    navigateToWorldBible,
     navigateToEntityList,
     navigateToCampaignSelect,
     setView,
@@ -41,7 +41,7 @@ export function Sidebar() {
           <ChevronRight size={16} />
         </button>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, paddingTop: 8 }}>
-          <button style={iconBtn(isActive('campaign-overview'))} onClick={navigateToCampaignOverview} title="Overview">
+          <button style={iconBtn(isActive('world-bible'))} onClick={navigateToWorldBible} title="World Bible">
             <BookOpen size={18} />
           </button>
           {ENTITY_TYPES.map(({ type, icon, color }) => (
@@ -75,10 +75,10 @@ export function Sidebar() {
         <NavItem
           label="Hub"
           icon={<BookOpen size={15} />}
-          active={isActive('campaign-overview')}
+          active={isActive('world-bible')}
           hovered={hoveredItem === 'overview'}
           onHover={(h) => setHoveredItem(h ? 'overview' : null)}
-          onClick={navigateToCampaignOverview}
+          onClick={navigateToWorldBible}
         />
 
         <div style={{ margin: '12px 0 4px 8px', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>

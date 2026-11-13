@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, dialog } from 'electron'
 import {
   createCampaign,
   getCampaigns,
@@ -6,6 +6,8 @@ import {
   updateCampaign,
   deleteCampaign,
 } from '../../src/main/campaigns/campaignService'
+import { seedMonstersForCampaign } from '../../src/main/entities/monsterSeedService'
+import { seedSpellsForCampaign } from '../../src/main/entities/spellSeedService'
 
 export function registerCampaignHandlers() {
   ipcMain.handle('campaigns:list', () =>
@@ -20,7 +22,7 @@ export function registerCampaignHandlers() {
     createCampaign(data)
   )
 
-  ipcMain.handle('campaigns:update', (_event, id: string, data: { name?: string; description?: string; system?: string }) =>
+  ipcMain.handle('campaigns:update', (_event, id: string, data: { name?: string; description?: string; system?: string; backgroundImage?: string | null }) =>
     updateCampaign(id, data)
   )
 
@@ -28,4 +30,25 @@ export function registerCampaignHandlers() {
     await deleteCampaign(id)
     return { success: true }
   })
+
+  ipcMain.handle('campaigns:seedMonsters', async (_event, campaignId: string) => {
+    const count = await seedMonstersForCampaign(campaignId)
+    return { seeded: count }
+  })
+
+  ipcMain.handle('campaigns:seedSpells', async (_event, campaignId: string) => {
+    const count = await seedSpellsForCampaign(campaignId)
+    return { seeded: count }
+  })
+
+  ipcMain.handle('campaigns:pickImage', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Choose Campaign Background',
+      filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp'] }],
+      properties: ['openFile'],
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    return result.filePaths[0]
+  })
+
 }

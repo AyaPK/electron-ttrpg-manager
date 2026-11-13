@@ -36,6 +36,13 @@
       "when": 1794488325137,
       "tag": "0004_cloudy_madrox",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794575385239,
+      "tag": "0005_campaign_background",
+      "breakpoints": true
     }
   ]
 }

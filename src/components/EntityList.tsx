@@ -15,6 +15,7 @@ const TYPE_FILTERS: { type: EntityType | null; label: string }[] = [
   { type: 'player', label: 'Players' },
   { type: 'faction', label: 'Factions' },
   { type: 'item', label: 'Items' },
+  { type: 'spell', label: 'Spells' },
 ]
 
 export function EntityList() {

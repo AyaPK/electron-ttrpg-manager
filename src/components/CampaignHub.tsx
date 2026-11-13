@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Users, MapPin, Shield, Package, BookOpen, Settings, LogOut, ChevronRight, Skull, Sword } from 'lucide-react'
+import { Users, MapPin, Shield, Package, BookOpen, Settings, LogOut, ChevronRight, Skull, Sword, Sparkles } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import type { EntityCounts, EntityType } from '../types/electron.d'
 
@@ -19,8 +19,8 @@ interface OrbitalNodeDef {
 
 // Uniform orbital radius in px
 const ORBIT_RADIUS = 210
-// 8 nodes, start at top (-90°), evenly spaced at 45° each
-const ANGLES = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ((i * 45 - 90) * Math.PI) / 180)
+// 9 nodes, start at top (-90°), evenly spaced at 40° each
+const ANGLES = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => ((i * 40 - 90) * Math.PI) / 180)
 
 // ---------------------------------------------------------------------------
 // Component
@@ -34,7 +34,7 @@ export function CampaignHub() {
     setView,
   } = useAppStore()
 
-  const [counts, setCounts] = useState<EntityCounts>({ npc: 0, location: 0, faction: 0, item: 0, monster: 0, player: 0, total: 0 })
+  const [counts, setCounts] = useState<EntityCounts>({ npc: 0, location: 0, faction: 0, item: 0, monster: 0, player: 0, spell: 0, total: 0 })
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -108,6 +108,15 @@ export function CampaignHub() {
       icon: <BookOpen size={20} />,
       color: 'var(--accent)',
       action: () => navigateToEntityList(null),
+    },
+    {
+      id: 'spell',
+      label: 'Spells',
+      sublabel: `${counts.spell}`,
+      icon: <Sparkles size={20} />,
+      color: 'var(--spell-color)',
+      action: () => navigateToEntityList('spell'),
+      entityType: 'spell',
     },
     {
       id: 'map',

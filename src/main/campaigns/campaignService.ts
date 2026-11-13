@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { getDatabase } from '../database/connection'
 import { campaigns } from '../database/schema'
 import { getActiveWorkspace } from '../workspaces/workspaceService'
+import { seedMonstersForCampaign } from '../entities/monsterSeedService'
+import { seedSpellsForCampaign } from '../entities/spellSeedService'
 import type { Campaign } from '../database/schema'
 
 export const CreateCampaignSchema = z.object({
@@ -16,6 +18,7 @@ export const UpdateCampaignSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   system: z.string().optional(),
+  backgroundImage: z.string().nullable().optional(),
 })
 
 export type CreateCampaignInput = z.infer<typeof CreateCampaignSchema>
@@ -33,11 +36,23 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
     name: data.name,
     description: data.description ?? null,
     system: data.system ?? null,
+    backgroundImage: null,
     createdAt: now,
     updatedAt: now,
   }
 
   await db.insert(campaigns).values(campaign)
+
+  // Seed monster entities from JSON file (skips if file not found or already seeded)
+  seedMonstersForCampaign(campaign.id).catch((err) =>
+    console.error('[campaignService] Monster seed failed:', err),
+  )
+
+  // Seed spell entities from JSON file (skips if file not found or already seeded)
+  seedSpellsForCampaign(campaign.id).catch((err) =>
+    console.error('[campaignService] Spell seed failed:', err),
+  )
+
   return campaign
 }
 
@@ -70,6 +85,7 @@ export async function updateCampaign(id: string, input: UpdateCampaignInput): Pr
   if (data.name !== undefined) updated.name = data.name
   if (data.description !== undefined) updated.description = data.description
   if (data.system !== undefined) updated.system = data.system
+  if (data.backgroundImage !== undefined) updated.backgroundImage = data.backgroundImage
 
   await db.update(campaigns).set(updated).where(eq(campaigns.id, id))
 
