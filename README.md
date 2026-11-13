@@ -1,4 +1,5 @@
-# Campaign Manager
+# World Weaver
+### Every story has a thousand threads
 
 A desktop application for creating tabletop RPG campaigns, managing worldbuilding entities, and linking them together. Built as a vertical slice to prove the application architecture and data model before introducing maps, timelines, session planning, or collaboration.
 
