@@ -5,7 +5,7 @@ A desktop application for creating tabletop RPG campaigns, managing worldbuildin
 
 ## What it does
 
-The application lets you create campaigns and populate them with four entity types: NPCs, locations, factions, and items. Entities share a common structure (UUID, campaign ID, name, type, visibility, timestamps) and store type-specific fields as validated metadata. Entities can be linked through typed relationships that are navigable from either end. Descriptions use a rich-text editor. All data persists locally via SQLite.
+The application lets you create campaigns and populate them with various entity types, including: NPCs, locations, factions, spells, and items. Entities share a common structure (UUID, campaign ID, name, type, visibility, timestamps) and store type-specific fields as validated metadata. Entities can be linked through typed relationships that are navigable from either end. Descriptions use a rich-text editor. All data persists locally via SQLite.
 
 ## Stack
 
